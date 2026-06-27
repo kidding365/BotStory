@@ -50,12 +50,19 @@ Example:
 
     try {
         // Try to find JSON in the response if it's not pure JSON
-        // Use a more sophisticated regex to handle nested braces and potential markdown noise
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        let jsonToParse = jsonMatch ? jsonMatch[0] : text;
+        // We look for the first '{' and the last '}'
+        const firstBrace = text.indexOf('{');
+        const lastBrace = text.lastIndexOf('}');
 
-        // Remove markdown backticks if present
-        jsonToParse = jsonToParse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
+            throw new Error("No JSON object found in response");
+        }
+
+        let jsonToParse = text.substring(firstBrace, lastBrace + 1);
+
+        // Minimal cleaning for common LLM errors (like trailing commas before closing braces)
+        // This is a naive fix but covers many common cases
+        jsonToParse = jsonToParse.replace(/,\s*([\]\}])/g, '$1');
 
         return JSON.parse(jsonToParse);
     } catch (e) {
@@ -73,11 +80,11 @@ Example:
     }
   }
 
-  public async generateImage(prompt: string, modelName: string = "imagen-4.0-generate-001"): Promise<string> {
+  public async generateImage(prompt: string, modelName: string = "imagen-3.0-generate-001"): Promise<string> {
     if (!this.genAI) return "";
 
-    // Check if the current model is an imagen model, otherwise use default
-    const imgModelName = modelName.includes('imagen') ? modelName : "imagen-4.0-generate-001";
+    // Check if the current model is an imagen model, otherwise use a known stable default
+    const imgModelName = modelName.includes('imagen') ? modelName : "imagen-3.0-generate-001";
 
     try {
         const model = this.genAI.getGenerativeModel({ model: imgModelName });

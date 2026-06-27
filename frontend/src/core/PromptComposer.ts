@@ -7,10 +7,11 @@ export class PromptComposer {
     let prompt = `Continue the story based on the history and world settings provided below.
 You MUST respond with a JSON object.
 
-CRITICAL IMAGE INSTRUCTION:
-The "imagePrompt" you generate must be a vivid, detailed visual description of the SCENE that just happened in the "narrative" you wrote above.
-DO NOT describe random landscapes. Describe the characters and their actions in the current room/setting.
-Example: if the narrative is about a character finding a letter in a dorm, the imagePrompt should be "A medium close-up of a student in a stone-walled dorm room, holding an old parchment letter, sunlight streaming through a window."
+CRITICAL:
+1. "narrative": Write the next part of the story (at least 2 paragraphs).
+2. "imagePrompt": Create a vivid, detailed visual description of the SCENE that just happened in your "narrative". DO NOT describe generic landscapes. Include character appearance, clothing, and the specific interior/exterior setting from the narrative.
+3. "suggestedActions": Provide exactly 3 short, punchy options for the player.
+4. "stateUpdates": If the narrative implies a change in rank, inventory, or known spells, include the update here.
 
 World visual style: ${world.imageStyleCharacterPost || ''}
 

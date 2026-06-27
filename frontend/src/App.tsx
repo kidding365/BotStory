@@ -79,12 +79,14 @@ const App: React.FC = () => {
     try {
       const aiService = new AIService(apiKey);
       const prompt = promptComposer.current.assemblePrompt(state, text);
+      console.log('[App] Full Prompt:', prompt);
 
       // Add user message to history
       stateManager.current.addToHistory('user', text);
       setState({ ...stateManager.current.getState()! });
 
       const response = await aiService.generateStoryResponse(prompt, modelName);
+      console.log('[App] Parsed Response:', response);
 
       // Apply state updates from AI
       if (response.stateUpdates) {
@@ -283,9 +285,12 @@ const App: React.FC = () => {
                     <option value="gemini-2.5-flash-image">Gemini 2.5 Flash Image</option>
                     <option value="gemma-4-26b-a4b-it">Gemma 4 26b-a4b-it</option>
                     <option value="gemma-4-31b-it">Gemma 4 31b-it</option>
+                    <option value="imagen-3.0-generate-001">Imagen 3.0 Generate (Stable)</option>
+                    <option value="imagen-3.0-fast-generate-001">Imagen 3.0 Fast Generate</option>
                     <option value="imagen-4.0-fast-generate-001">Imagen 4.0 Fast Generate</option>
                     <option value="imagen-4.0-ultra-generate-001">Imagen 4.0 Ultra Generate</option>
                     <option value="imagen-4.0-generate-001">Imagen 4.0 Generate</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy Stable)</option>
                     <option value="gemini-3.5-flash">Nanobanana (Gemini 3.5 Flash)</option>
                 </select>
                 </div>
