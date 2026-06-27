@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["main", "botstory-clonage", "botstory-clonage-final", "botstory-clonage-final-v2"]
+    branches: ["**"]
   workflow_dispatch:
 
 permissions:
