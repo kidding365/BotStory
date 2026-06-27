@@ -7,9 +7,12 @@ export class PromptComposer {
     let prompt = `Continue the story based on the history and world settings provided below.
 You MUST respond with a JSON object.
 
-CRITICAL: The "imagePrompt" you generate must be a vivid, detailed visual description of the SCENE that just happened in your "narrative".
-It should emphasize colors, lighting, composition, and specific character appearances as defined in the character profile.
-Use the world's style if applicable: ${world.imageStyleCharacterPost || ''}
+CRITICAL IMAGE INSTRUCTION:
+The "imagePrompt" you generate must be a vivid, detailed visual description of the SCENE that just happened in the "narrative" you wrote above.
+DO NOT describe random landscapes. Describe the characters and their actions in the current room/setting.
+Example: if the narrative is about a character finding a letter in a dorm, the imagePrompt should be "A medium close-up of a student in a stone-walled dorm room, holding an old parchment letter, sunlight streaming through a window."
+
+World visual style: ${world.imageStyleCharacterPost || ''}
 
 WORLD SETTING: ${world.title}
 BACKGROUND: ${world.background}

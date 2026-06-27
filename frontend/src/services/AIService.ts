@@ -46,11 +46,17 @@ Example:
         generationConfig
     });
     const text = result.response.text();
+    console.log(`[AIService] Raw response from ${modelName}:`, text);
 
     try {
         // Try to find JSON in the response if it's not pure JSON
+        // Use a more sophisticated regex to handle nested braces and potential markdown noise
         const jsonMatch = text.match(/\{[\s\S]*\}/);
-        const jsonToParse = jsonMatch ? jsonMatch[0] : text;
+        let jsonToParse = jsonMatch ? jsonMatch[0] : text;
+
+        // Remove markdown backticks if present
+        jsonToParse = jsonToParse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+
         return JSON.parse(jsonToParse);
     } catch (e) {
         console.error("Failed to parse AI response as JSON", text);
