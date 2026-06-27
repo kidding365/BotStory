@@ -18,7 +18,7 @@ import {
 
 const App: React.FC = () => {
   const [apiKey, setApiKey] = useState<string>(localStorage.getItem('gemini_api_key') || '');
-  const [modelName, setModelName] = useState<string>(localStorage.getItem('botstory_model_name') || 'gemini-1.5-flash');
+  const [modelName, setModelName] = useState<string>(localStorage.getItem('botstory_model_name') || 'gemini-3.5-flash');
   const [state, setState] = useState<GameState | null>(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -276,11 +276,16 @@ const App: React.FC = () => {
                     onChange={(e) => setModelName(e.target.value)}
                     className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white appearance-none"
                 >
-                    <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                    <option value="gemma-2-27b">Gemma 2 27b</option>
-                    <option value="gemma-2-9b">Gemma 2 9b</option>
-                    <option value="gemini-1.5-flash">Nanobanana (Gemini Flash)</option>
+                    <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+                    <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
+                    <option value="gemini-3.1-flash-image">Gemini 3.1 Flash Image</option>
+                    <option value="gemini-2.5-flash-image">Gemini 2.5 Flash Image</option>
+                    <option value="gemma-4-26b-a4b-it">Gemma 4 26b-a4b-it</option>
+                    <option value="gemma-4-31b-it">Gemma 4 31b-it</option>
+                    <option value="imagen-4.0-fast-generate-001">Imagen 4.0 Fast Generate</option>
+                    <option value="imagen-4.0-ultra-generate-001">Imagen 4.0 Ultra Generate</option>
+                    <option value="imagen-4.0-generate-001">Imagen 4.0 Generate</option>
+                    <option value="gemini-3.5-flash">Nanobanana (Gemini 3.5 Flash)</option>
                 </select>
                 </div>
             </div>
