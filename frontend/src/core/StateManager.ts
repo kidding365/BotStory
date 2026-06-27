@@ -62,9 +62,9 @@ export class StateManager {
     }
   }
 
-  public addToHistory(role: "user" | "model", content: string, narrative?: string, images?: string[]) {
+  public addToHistory(role: "user" | "model", content: string, narrative?: string, images?: string[], suggestedActions?: string[]) {
     if (!this.state) return;
-    this.state.session.history.push({ role, content, narrative, images });
+    this.state.session.history.push({ role, content, narrative, images, suggestedActions });
     this.saveToStorage();
   }
 

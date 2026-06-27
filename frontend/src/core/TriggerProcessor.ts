@@ -36,7 +36,7 @@ export class TriggerProcessor {
         // Simple keyword-based heuristic for now, as in the backend reference.
         // In a full implementation, this might involve an LLM call or advanced NLP.
         const keywords = (condition.data as string).toLowerCase().split(/\s+/);
-        const match = keywords.some(kw => kw.length > 4 && narrative.toLowerCase().includes(kw));
+        const match = keywords.some(kw => kw.trim().length > 0 && narrative.toLowerCase().includes(kw.trim()));
         if (!match) return false;
       }
       // Add other condition types as needed

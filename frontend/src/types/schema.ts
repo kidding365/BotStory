@@ -81,6 +81,6 @@ export interface GameState {
     currentValues: Record<string, any>;
     modifiedInstructions: Record<string, string>;
     firedTriggers: string[];
-    history: { role: "user" | "model"; content: string; narrative?: string; images?: string[] }[];
+    history: { role: "user" | "model"; content: string; narrative?: string; images?: string[]; suggestedActions?: string[] }[];
   };
 }

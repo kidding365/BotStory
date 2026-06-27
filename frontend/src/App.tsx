@@ -89,7 +89,7 @@ const App: React.FC = () => {
         imageUrl = await aiService.generateImage(response.imagePrompt);
       }
 
-      stateManager.current.addToHistory('model', response.narrative, response.narrative, imageUrl ? [imageUrl] : []);
+      stateManager.current.addToHistory('model', response.narrative, response.narrative, imageUrl ? [imageUrl] : [], response.suggestedActions);
       setState({ ...stateManager.current.getState()! });
     } catch (e) {
       console.error(e);
@@ -190,6 +190,20 @@ const App: React.FC = () => {
                   <div className="prose prose-invert max-w-none text-lg text-neutral-300 leading-relaxed">
                     {msg.narrative}
                   </div>
+                  {msg.suggestedActions && msg.suggestedActions.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-4">
+                      {msg.suggestedActions.map((action, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => handleSend(action)}
+                          disabled={loading}
+                          className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 rounded-full text-sm text-neutral-300 transition-colors"
+                        >
+                          {action}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -253,6 +267,7 @@ const App: React.FC = () => {
                     <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                     <option value="gemma-2-27b">Gemma 2 27b</option>
                     <option value="gemma-2-9b">Gemma 2 9b</option>
+                    <option value="gemini-1.5-flash">Nanobanana (Gemini Flash)</option>
                 </select>
                 </div>
             </div>
