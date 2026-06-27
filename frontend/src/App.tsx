@@ -104,9 +104,9 @@ const App: React.FC = () => {
 
       stateManager.current.addToHistory('model', response.narrative, response.narrative, imageUrl ? [imageUrl] : [], response.suggestedActions);
       setState({ ...stateManager.current.getState()! });
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert('Error interacting with AI');
+      alert(`Error interacting with AI: ${e.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }

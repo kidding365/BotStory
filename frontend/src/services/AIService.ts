@@ -14,21 +14,27 @@ export class AIService {
 
     const model = this.genAI.getGenerativeModel({
         model: modelName,
-        generationConfig: {
-            responseMimeType: "application/json"
-        }
     });
 
+    // Only set JSON mode for models that typically support it (Gemini)
+    // Gemma and Imagen models might not support it via this SDK
+    const isGemini = modelName.startsWith('gemini');
+    const generationConfig = isGemini ? { responseMimeType: "application/json" } : {};
+
     const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }]
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig
     });
     const text = result.response.text();
 
     try {
-        return JSON.parse(text);
+        // Try to find JSON in the response if it's not pure JSON
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        const jsonToParse = jsonMatch ? jsonMatch[0] : text;
+        return JSON.parse(jsonToParse);
     } catch (e) {
         console.error("Failed to parse AI response as JSON", text);
-        throw new Error("Invalid AI response format.");
+        throw new Error(`Invalid AI response format from ${modelName}. Expected JSON but got: ${text.slice(0, 100)}...`);
     }
   }
 
