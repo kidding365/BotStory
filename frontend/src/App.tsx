@@ -159,7 +159,7 @@ const App: React.FC = () => {
                 <Book size={14} /> World State
               </h2>
               <div className="space-y-2">
-                {state.world.trackedItems.map(item => (
+                {(state.world.trackedItems || []).map(item => (
                   <div key={item.id} className="bg-neutral-800/30 p-3 rounded-lg border border-neutral-700/30">
                     <p className="text-xs text-neutral-500">{item.name}</p>
                     <p className="text-sm font-medium text-neutral-200">

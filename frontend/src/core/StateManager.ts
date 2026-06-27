@@ -14,12 +14,12 @@ export class StateManager {
     }
 
     const currentValues: Record<string, any> = {};
-    world.trackedItems.forEach(item => {
+    (world.trackedItems || []).forEach(item => {
       currentValues[item.id] = item.initialValue;
     });
 
     const modifiedInstructions: Record<string, string> = {};
-    world.instructionBlocks.forEach(block => {
+    (world.instructionBlocks || []).forEach(block => {
       modifiedInstructions[block.id] = block.content;
     });
 

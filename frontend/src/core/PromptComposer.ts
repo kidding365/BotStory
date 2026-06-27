@@ -20,15 +20,15 @@ CURRENT STORY TRUTHS:
 ${Object.values(session.modifiedInstructions).map(content => `- ${content}`).join("\n")}
 
 WORLD STATE:
-${world.trackedItems.map(item => `- ${item.name}: ${session.currentValues[item.id]} (Update rule: ${item.updateInstructions})`).join("\n")}
+${(world.trackedItems || []).map(item => `- ${item.name}: ${session.currentValues[item.id]} (Update rule: ${item.updateInstructions})`).join("\n")}
 
 PLAYER CHARACTER: ${session.character.name}
 DESCRIPTION: ${session.character.description}
 SKILLS: ${JSON.stringify(session.character.skills)}
 
 RELEVANT LORE:
-${world.loreBookEntries
-  .filter(entry => entry.keywords.some(kw => userInput.toLowerCase().includes(kw.toLowerCase())))
+${(world.loreBookEntries || [])
+  .filter(entry => (entry.keywords || []).some(kw => userInput.toLowerCase().includes(kw.toLowerCase())))
   .map(entry => `- ${entry.name}: ${entry.content}`)
   .join("\n")}
 
