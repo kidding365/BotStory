@@ -46,13 +46,26 @@ const App: React.FC = () => {
 
   const handleImportWorld = () => {
     try {
-      const world: WorldSchema = JSON.parse(worldJson);
+      let raw = worldJson.trim();
+      // Try to extract JSON from markdown code blocks
+      const match = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (match) {
+        raw = match[1].trim();
+      }
+
+      const world: WorldSchema = JSON.parse(raw);
+
+      if (!world.possibleCharacters || world.possibleCharacters.length === 0) {
+        throw new Error("No characters found in world definition.");
+      }
+
       // For simplicity, pick the first character
       const newState = stateManager.current.createSession(world, world.possibleCharacters[0].characterId);
       setState(newState);
       setShowWorldImport(false);
-    } catch (e) {
-      alert('Invalid World JSON');
+    } catch (e: any) {
+      console.error('JSON Parse Error:', e);
+      alert(`Invalid World JSON: ${e.message}`);
     }
   };
 

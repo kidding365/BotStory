@@ -30,19 +30,19 @@ export interface Character {
 export interface TriggerEvent {
   id: string;
   name: string;
-  triggerConditions: TriggerCondition[];
-  triggerEffects: TriggerEffect[];
+  triggerConditions?: TriggerCondition[];
+  triggerEffects?: TriggerEffect[];
 }
 
 export interface TriggerCondition {
   id: string;
-  type: "triggerOnEvent" | "valueCheck";
+  type: string;
   data: any;
 }
 
 export interface TriggerEffect {
   id: string;
-  type: "effectShowMessage" | "effectSetTrackedItemValue" | "effectModifyInstructionBlock";
+  type: string;
   data: any;
 }
 
@@ -62,10 +62,10 @@ export interface LoreBookEntry {
 export interface TrackedItem {
   id: string;
   name: string;
-  dataType: "text" | "number" | "xml";
+  dataType: string;
   initialValue: any;
   updateInstructions: string;
-  autoUpdate: boolean;
+  autoUpdate?: boolean;
 }
 
 export interface GameCondition {

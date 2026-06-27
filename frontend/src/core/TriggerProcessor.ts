@@ -15,7 +15,7 @@ export class TriggerProcessor {
     const world = state.world;
     const session = state.session;
 
-    for (const event of world.triggerEvents) {
+    for (const event of world.triggerEvents || []) {
       if (session.firedTriggers.includes(event.id)) {
         continue;
       }
@@ -31,6 +31,7 @@ export class TriggerProcessor {
   }
 
   private evaluateConditions(event: TriggerEvent, narrative: string): boolean {
+    if (!event.triggerConditions) return false;
     for (const condition of event.triggerConditions) {
       if (condition.type === "triggerOnEvent") {
         // Simple keyword-based heuristic for now, as in the backend reference.
@@ -45,6 +46,7 @@ export class TriggerProcessor {
   }
 
   private applyEffects(event: TriggerEvent) {
+    if (!event.triggerEffects) return;
     for (const effect of event.triggerEffects) {
       switch (effect.type) {
         case "effectShowMessage":
