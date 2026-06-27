@@ -4,16 +4,12 @@ export class PromptComposer {
   public assemblePrompt(state: GameState, userInput: string): string {
     const { world, session } = state;
 
-    let prompt = `You are a world-class novelist and the engine for an interactive story.
-IMPORTANT: You MUST respond with ONLY a valid JSON object. Do not include any text before or after the JSON.
+    let prompt = `Continue the story based on the history and world settings provided below.
+You MUST respond with a JSON object.
 
-Example JSON structure:
-{
-  "narrative": "The story text goes here...",
-  "stateUpdates": [{"itemId": "item1", "newValue": "value"}],
-  "suggestedActions": ["Action 1", "Action 2", "Action 3"],
-  "imagePrompt": "A highly detailed description of the scene for an image generator."
-}
+CRITICAL: The "imagePrompt" you generate must be a vivid, detailed visual description of the SCENE that just happened in your "narrative".
+It should emphasize colors, lighting, composition, and specific character appearances as defined in the character profile.
+Use the world's style if applicable: ${world.imageStyleCharacterPost || ''}
 
 WORLD SETTING: ${world.title}
 BACKGROUND: ${world.background}
@@ -31,7 +27,7 @@ DESCRIPTION: ${session.character.description}
 SKILLS: ${JSON.stringify(session.character.skills)}
 
 STORY HISTORY (LAST 5 TURNS):
-${session.history.slice(-10).map(m => `${m.role === 'user' ? 'PLAYER' : 'STORYTELLER'}: ${m.content}`).join("\n")}
+${session.history.slice(-10).map(m => `${m.role === 'user' ? 'PLAYER' : 'STORYTELLER'}: ${m.narrative || m.content}`).join("\n")}
 
 RELEVANT LORE:
 ${(world.loreBookEntries || [])

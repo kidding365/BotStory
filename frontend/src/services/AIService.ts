@@ -12,12 +12,32 @@ export class AIService {
   public async generateStoryResponse(prompt: string, modelName: string) {
     if (!this.genAI) throw new Error("API Key not configured.");
 
+    const systemInstruction = `You are a world-class novelist and interactive story engine.
+You MUST respond with ONLY a valid JSON object. Do not include any commentary or conversational filler.
+
+The JSON object MUST have these keys:
+- narrative (string): The story text for this turn.
+- stateUpdates (array of {itemId: string, newValue: any}): Changes to the world state.
+- suggestedActions (array of strings): 3 possible next actions for the player.
+- imagePrompt (string): A highly detailed, vivid visual description of the EXACT scene described in the narrative.
+
+Example:
+{
+  "narrative": "...",
+  "stateUpdates": [],
+  "suggestedActions": ["...", "...", "..."],
+  "imagePrompt": "..."
+}`;
+
     const model = this.genAI.getGenerativeModel({
         model: modelName,
+        systemInstruction: {
+            role: "system",
+            parts: [{ text: systemInstruction }]
+        }
     });
 
     // Only set JSON mode for models that typically support it (Gemini)
-    // Gemma and Imagen models might not support it via this SDK
     const isGemini = modelName.startsWith('gemini');
     const generationConfig = isGemini ? { responseMimeType: "application/json" } : {};
 
