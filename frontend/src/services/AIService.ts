@@ -83,12 +83,18 @@ Example:
   public async generateImage(prompt: string, modelName: string = "imagen-3.0-generate-001"): Promise<string> {
     if (!this.genAI) return "";
 
-    // Check if the current model is an imagen model, otherwise use a known stable default
-    const imgModelName = modelName.includes('imagen') ? modelName : "imagen-3.0-generate-001";
+    // Some regions/keys don't support Imagen via the standard SDK yet.
+    // If it starts with gemini, we can try to use it as an image generator if supported,
+    // but usually, we want to stick to the dedicated imagen models.
+    const imgModelName = modelName;
+    console.log(`[AIService] Generating image with model: ${imgModelName}`);
 
     try {
         const model = this.genAI.getGenerativeModel({ model: imgModelName });
-        const result = await model.generateContent(prompt);
+        // Set a shorter timeout or simpler config if needed
+        const result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }]
+        });
         const response = result.response;
 
         // Google Imagen usually returns images in a specific way in the response

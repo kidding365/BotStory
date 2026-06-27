@@ -18,7 +18,8 @@ import {
 
 const App: React.FC = () => {
   const [apiKey, setApiKey] = useState<string>(localStorage.getItem('gemini_api_key') || '');
-  const [modelName, setModelName] = useState<string>(localStorage.getItem('botstory_model_name') || 'gemini-3.5-flash');
+  const [modelName, setModelName] = useState<string>(localStorage.getItem('botstory_model_name') || 'gemini-3.1-flash-lite');
+  const [imageModelName, setImageModelName] = useState<string>(localStorage.getItem('botstory_image_model_name') || 'imagen-3.0-generate-001');
   const [state, setState] = useState<GameState | null>(null);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -88,6 +89,15 @@ const App: React.FC = () => {
       const response = await aiService.generateStoryResponse(prompt, modelName);
       console.log('[App] Parsed Response:', response);
 
+      // Fallback for missing suggested actions
+      if (!response.suggestedActions || response.suggestedActions.length === 0) {
+        response.suggestedActions = [
+            "Explore the surroundings further.",
+            "Reflect on the current situation.",
+            "Look for potential allies or items."
+        ];
+      }
+
       // Apply state updates from AI
       if (response.stateUpdates) {
         response.stateUpdates.forEach((update: any) => {
@@ -101,8 +111,8 @@ const App: React.FC = () => {
       // Optional: Generate image if prompt provided
       let imageUrl = '';
       if (response.imagePrompt) {
-        // Try to find an imagen model in the user's settings, otherwise use default
-        imageUrl = await aiService.generateImage(response.imagePrompt, modelName);
+        // Use the dedicated image model from settings
+        imageUrl = await aiService.generateImage(response.imagePrompt, imageModelName);
       }
 
       stateManager.current.addToHistory('model', response.narrative, response.narrative, imageUrl ? [imageUrl] : [], response.suggestedActions);
@@ -118,6 +128,7 @@ const App: React.FC = () => {
   const handleSaveSettings = () => {
     localStorage.setItem('gemini_api_key', apiKey);
     localStorage.setItem('botstory_model_name', modelName);
+    localStorage.setItem('botstory_image_model_name', imageModelName);
     setShowSettings(false);
   };
 
@@ -273,7 +284,7 @@ const App: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                <label className="text-sm font-medium text-neutral-400">AI Model</label>
+                <label className="text-sm font-medium text-neutral-400">Story Model (Text)</label>
                 <select
                     value={modelName}
                     onChange={(e) => setModelName(e.target.value)}
@@ -281,17 +292,27 @@ const App: React.FC = () => {
                 >
                     <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
                     <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
-                    <option value="gemini-3.1-flash-image">Gemini 3.1 Flash Image</option>
                     <option value="gemini-2.5-flash-image">Gemini 2.5 Flash Image</option>
                     <option value="gemma-4-26b-a4b-it">Gemma 4 26b-a4b-it</option>
                     <option value="gemma-4-31b-it">Gemma 4 31b-it</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy Stable)</option>
+                </select>
+                </div>
+
+                <div className="space-y-2">
+                <label className="text-sm font-medium text-neutral-400">Image Model</label>
+                <select
+                    value={imageModelName}
+                    onChange={(e) => setImageModelName(e.target.value)}
+                    className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white appearance-none"
+                >
                     <option value="imagen-3.0-generate-001">Imagen 3.0 Generate (Stable)</option>
                     <option value="imagen-3.0-fast-generate-001">Imagen 3.0 Fast Generate</option>
                     <option value="imagen-4.0-fast-generate-001">Imagen 4.0 Fast Generate</option>
                     <option value="imagen-4.0-ultra-generate-001">Imagen 4.0 Ultra Generate</option>
                     <option value="imagen-4.0-generate-001">Imagen 4.0 Generate</option>
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy Stable)</option>
-                    <option value="gemini-3.5-flash">Nanobanana (Gemini 3.5 Flash)</option>
+                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Image Support)</option>
+                    <option value="gemini-3.1-flash-image">Gemini 3.1 Flash Image</option>
                 </select>
                 </div>
             </div>
