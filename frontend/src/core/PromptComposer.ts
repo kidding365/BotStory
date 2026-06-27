@@ -5,11 +5,15 @@ export class PromptComposer {
     const { world, session } = state;
 
     let prompt = `You are a world-class novelist and the engine for an interactive story.
-Format your response as a JSON object with the following keys:
-- narrative: The story text for this turn.
-- stateUpdates: An array of objects { itemId: string, newValue: any } reflecting changes in the world state.
-- suggestedActions: An array of 3 strings for next possible actions.
-- imagePrompt: A detailed prompt for generating an illustration of the current scene.
+IMPORTANT: You MUST respond with ONLY a valid JSON object. Do not include any text before or after the JSON.
+
+Example JSON structure:
+{
+  "narrative": "The story text goes here...",
+  "stateUpdates": [{"itemId": "item1", "newValue": "value"}],
+  "suggestedActions": ["Action 1", "Action 2", "Action 3"],
+  "imagePrompt": "A highly detailed description of the scene for an image generator."
+}
 
 WORLD SETTING: ${world.title}
 BACKGROUND: ${world.background}
@@ -25,6 +29,9 @@ ${(world.trackedItems || []).map(item => `- ${item.name}: ${session.currentValue
 PLAYER CHARACTER: ${session.character.name}
 DESCRIPTION: ${session.character.description}
 SKILLS: ${JSON.stringify(session.character.skills)}
+
+STORY HISTORY (LAST 5 TURNS):
+${session.history.slice(-10).map(m => `${m.role === 'user' ? 'PLAYER' : 'STORYTELLER'}: ${m.content}`).join("\n")}
 
 RELEVANT LORE:
 ${(world.loreBookEntries || [])

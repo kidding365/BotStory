@@ -99,7 +99,8 @@ const App: React.FC = () => {
       // Optional: Generate image if prompt provided
       let imageUrl = '';
       if (response.imagePrompt) {
-        imageUrl = await aiService.generateImage(response.imagePrompt);
+        // Try to find an imagen model in the user's settings, otherwise use default
+        imageUrl = await aiService.generateImage(response.imagePrompt, modelName);
       }
 
       stateManager.current.addToHistory('model', response.narrative, response.narrative, imageUrl ? [imageUrl] : [], response.suggestedActions);

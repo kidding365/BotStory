@@ -34,17 +34,42 @@ export class AIService {
         return JSON.parse(jsonToParse);
     } catch (e) {
         console.error("Failed to parse AI response as JSON", text);
+        // Fallback: If it's not JSON, wrap the plain text into a valid object
+        if (text && text.length > 10) {
+            return {
+                narrative: text,
+                stateUpdates: [],
+                suggestedActions: [],
+                imagePrompt: text.slice(0, 100)
+            };
+        }
         throw new Error(`Invalid AI response format from ${modelName}. Expected JSON but got: ${text.slice(0, 100)}...`);
     }
   }
 
-  public async generateImage(prompt: string): Promise<string> {
-    // Note: Google AI Studio's Imagen integration often requires specific setup
-    // For now, we'll implement a placeholder or use the experimental Imagen API if available.
-    // If Imagen is not directly accessible via @google/generative-ai, we might need
-    // a different endpoint or a fallback.
-    console.log("Generating image with prompt:", prompt);
-    // Placeholder returning a random image for now to allow UI development
-    return `https://picsum.photos/seed/${Math.random()}/800/600`;
+  public async generateImage(prompt: string, modelName: string = "imagen-4.0-generate-001"): Promise<string> {
+    if (!this.genAI) return "";
+
+    // Check if the current model is an imagen model, otherwise use default
+    const imgModelName = modelName.includes('imagen') ? modelName : "imagen-4.0-generate-001";
+
+    try {
+        const model = this.genAI.getGenerativeModel({ model: imgModelName });
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+
+        // Google Imagen usually returns images in a specific way in the response
+        // For standard AI Studio integration, we check for candidates with data
+        const candidates = response.candidates;
+        if (candidates && candidates[0]?.content?.parts?.[0]?.inlineData) {
+            const data = candidates[0].content.parts[0].inlineData;
+            return `data:${data.mimeType};base64,${data.data}`;
+        }
+    } catch (e) {
+        console.error("Image generation failed:", e);
+    }
+
+    // Fallback to picsum if Imagen fails or is not accessible
+    return `https://picsum.photos/seed/${encodeURIComponent(prompt.slice(0, 20))}/800/600`;
   }
 }
