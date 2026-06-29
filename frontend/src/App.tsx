@@ -311,9 +311,8 @@ const App: React.FC = () => {
                     <option value="imagen-4.0-fast-generate-001">Imagen 4.0 Fast Generate</option>
                     <option value="imagen-4.0-ultra-generate-001">Imagen 4.0 Ultra Generate</option>
                     <option value="imagen-4.0-generate-001">Imagen 4.0 Generate</option>
-                    <option value="gemini-3.1-flash-tts-preview">Gemini 3.1 Flash TTS (Experimental)</option>
-                    <option value="gemini-2.5-flash-preview-tts">Gemini 2.5 Flash TTS (Experimental)</option>
                     <option value="gemini-1.5-flash">Gemini 1.5 Flash (Image Support)</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Image Support)</option>
                     <option value="gemini-3.1-flash-image">Gemini 3.1 Flash Image</option>
                 </select>
                 </div>

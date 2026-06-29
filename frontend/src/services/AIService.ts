@@ -67,13 +67,39 @@ Example:
         return JSON.parse(jsonToParse);
     } catch (e) {
         console.error("Failed to parse AI response as JSON", text);
-        // Fallback: If it's not JSON, wrap the plain text into a valid object
-        if (text && text.length > 10) {
+
+        // Advanced cleanup: remove prompt-like echoes
+        let cleanedText = text;
+        const promptEchoes = [
+            "Continue the story based on the history",
+            "You MUST respond with a JSON object",
+            "CRITICAL:",
+            "World visual style:",
+            "WORLD SETTING:",
+            "BACKGROUND:",
+            "PLAYER CHARACTER:",
+            "USER ACTION:"
+        ];
+
+        promptEchoes.forEach(echo => {
+            const index = cleanedText.indexOf(echo);
+            if (index !== -1) {
+                // If the echo is near the start, take everything AFTER the last known prompt echo
+                cleanedText = cleanedText.substring(index + echo.length).trim();
+            }
+        });
+
+        // Fallback: If it's not JSON, wrap the cleaned text into a valid object
+        if (cleanedText && cleanedText.length > 10) {
             return {
-                narrative: text,
+                narrative: cleanedText,
                 stateUpdates: [],
-                suggestedActions: [],
-                imagePrompt: text.slice(0, 100)
+                suggestedActions: [
+                    "Explore the surroundings further.",
+                    "Reflect on the current situation.",
+                    "Look for potential allies or items."
+                ],
+                imagePrompt: cleanedText.slice(0, 100)
             };
         }
         throw new Error(`Invalid AI response format from ${modelName}. Expected JSON but got: ${text.slice(0, 100)}...`);
@@ -109,6 +135,8 @@ Example:
     }
 
     // Fallback to picsum if Imagen fails or is not accessible
-    return `https://picsum.photos/seed/${encodeURIComponent(prompt.slice(0, 20))}/800/600`;
+    // Using a more detailed seed based on the prompt to avoid generic scenery
+    const seed = encodeURIComponent(prompt.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 50));
+    return `https://picsum.photos/seed/${seed}/800/600`;
   }
 }
