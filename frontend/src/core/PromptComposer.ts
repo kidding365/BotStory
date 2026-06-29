@@ -9,7 +9,10 @@ You MUST respond with a JSON object.
 
 CRITICAL:
 1. "narrative": Write the next part of the story (at least 2 paragraphs).
-2. "imagePrompt": Create a vivid, detailed visual description of the SCENE that just happened in your "narrative". DO NOT describe generic landscapes. Include character appearance, clothing, and the specific interior/exterior setting from the narrative.
+2. "imagePrompt": Create a vivid, detailed visual description of the IMMEDIATE SCENE from your "narrative".
+   - DO NOT describe generic landscapes or "scenery".
+   - DO NOT describe mountains or water unless the character is literally on them.
+   - FOCUS on the character's face, their current clothing, and what they are doing in the room or area.
 3. "suggestedActions": Provide exactly 3 short, punchy options for the player.
 4. "stateUpdates": If the narrative implies a change in rank, inventory, or known spells, include the update here.
 

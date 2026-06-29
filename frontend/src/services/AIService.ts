@@ -77,7 +77,15 @@ Example:
             "World visual style:",
             "WORLD SETTING:",
             "BACKGROUND:",
+            "CORE INSTRUCTIONS:",
+            "AUTHOR STYLE:",
+            "CURRENT STORY TRUTHS:",
+            "WORLD STATE:",
             "PLAYER CHARACTER:",
+            "DESCRIPTION:",
+            "SKILLS:",
+            "STORY HISTORY",
+            "RELEVANT LORE:",
             "USER ACTION:"
         ];
 
