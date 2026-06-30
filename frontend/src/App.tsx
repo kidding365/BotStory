@@ -290,14 +290,11 @@ const App: React.FC = () => {
                     onChange={(e) => setModelName(e.target.value)}
                     className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white appearance-none"
                 >
+                    <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite (High Quota)</option>
                     <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
-                    <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
-                    <option value="gemini-2.5-flash-image">Gemini 2.5 Flash Image</option>
                     <option value="gemma-4-26b-a4b-it">Gemma 4 26b-a4b-it</option>
                     <option value="gemma-4-31b-it">Gemma 4 31b-it</option>
                     <option value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy Stable)</option>
-                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Exp)</option>
-                    <option value="gemini-2.0-pro-exp">Gemini 2.0 Pro (Exp)</option>
                 </select>
                 </div>
 
@@ -308,12 +305,11 @@ const App: React.FC = () => {
                     onChange={(e) => setImageModelName(e.target.value)}
                     className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-white appearance-none"
                 >
-                    <option value="gemini-3.1-flash-tts-preview">Gemini 3.1 Flash TTS (Working)</option>
-                    <option value="gemini-2.5-flash-preview-tts">Gemini 2.5 Flash TTS (Working)</option>
-                    <option value="imagen-3.0-generate-001">Imagen 3.0 Generate (Stable)</option>
-                    <option value="imagen-4.0-generate-001">Imagen 4.0 Generate</option>
-                    <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
-                    <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Exp)</option>
+                    <option value="gemini-3.1-flash-tts-preview">Gemini 3.1 Flash TTS (Active Quota)</option>
+                    <option value="gemini-2.5-flash-preview-tts">Gemini 2.5 Flash TTS (Active Quota)</option>
+                    <option value="imagen-4.0-generate-001">Imagen 4.0 Generate (25/day)</option>
+                    <option value="imagen-4.0-fast-generate-001">Imagen 4.0 Fast (25/day)</option>
+                    <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
                 </select>
                 </div>
             </div>

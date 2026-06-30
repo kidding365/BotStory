@@ -138,8 +138,11 @@ Example:
             const data = candidates[0].content.parts[0].inlineData;
             return `data:${data.mimeType};base64,${data.data}`;
         }
-    } catch (e) {
+    } catch (e: any) {
         console.error("Image generation failed:", e);
+        if (e.message?.includes('429')) {
+            console.warn("[AIService] Rate limit reached for images. Using fallback.");
+        }
     }
 
     // Fallback to picsum if Imagen fails or is not accessible
