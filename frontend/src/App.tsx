@@ -25,6 +25,8 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showWorldImport, setShowWorldImport] = useState(false);
+  const [showCharacterSelect, setShowCharacterSelect] = useState(false);
+  const [importedWorld, setImportedWorld] = useState<WorldSchema | null>(null);
   const [worldJson, setWorldJson] = useState('');
 
   const stateManager = useRef(new StateManager());
@@ -48,26 +50,29 @@ const App: React.FC = () => {
   const handleImportWorld = () => {
     try {
       let raw = worldJson.trim();
-      // Try to extract JSON from markdown code blocks
       const match = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (match) {
-        raw = match[1].trim();
-      }
+      if (match) raw = match[1].trim();
 
       const world: WorldSchema = JSON.parse(raw);
-
       if (!world.possibleCharacters || world.possibleCharacters.length === 0) {
         throw new Error("No characters found in world definition.");
       }
 
-      // For simplicity, pick the first character
-      const newState = stateManager.current.createSession(world, world.possibleCharacters[0].characterId);
-      setState(newState);
+      setImportedWorld(world);
       setShowWorldImport(false);
+      setShowCharacterSelect(true);
     } catch (e: any) {
       console.error('JSON Parse Error:', e);
       alert(`Invalid World JSON: ${e.message}`);
     }
+  };
+
+  const handleSelectCharacter = (characterId: string) => {
+    if (!importedWorld) return;
+    const newState = stateManager.current.createSession(importedWorld, characterId);
+    setState(newState);
+    setShowCharacterSelect(false);
+    setImportedWorld(null);
   };
 
   const handleSend = async (customInput?: string) => {
@@ -340,7 +345,45 @@ const App: React.FC = () => {
                 onClick={handleImportWorld}
                 className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-neutral-200 transition-colors"
             >
-              Start Adventure
+              Confirm World
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showCharacterSelect && importedWorld && (
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-xl z-50 flex items-center justify-center p-6">
+          <div className="max-w-4xl w-full space-y-8 animate-in zoom-in-95 duration-300">
+            <div className="text-center space-y-2">
+                <h2 className="text-4xl font-black text-white uppercase tracking-tighter">Choose Your Character</h2>
+                <p className="text-neutral-400">Select a persona to inhabit in {importedWorld.title}</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {importedWorld.possibleCharacters.map(char => (
+                    <button
+                        key={char.characterId}
+                        onClick={() => handleSelectCharacter(char.characterId)}
+                        className="group bg-neutral-900 border-2 border-neutral-800 hover:border-white p-6 rounded-3xl text-left transition-all hover:scale-[1.02] flex items-center gap-6"
+                    >
+                        <div className="w-24 h-24 bg-neutral-800 rounded-2xl flex-shrink-0 flex items-center justify-center overflow-hidden border border-neutral-700">
+                            {char.portrait?.startsWith('http') ? (
+                                <img src={char.portrait} alt={char.name} className="w-full h-full object-cover" />
+                            ) : (
+                                <User className="text-neutral-500" size={40} />
+                            )}
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">{char.name}</h3>
+                            <p className="text-sm text-neutral-400 line-clamp-3 leading-relaxed">{char.description}</p>
+                        </div>
+                    </button>
+                ))}
+            </div>
+            <button
+                onClick={() => { setShowCharacterSelect(false); setShowWorldImport(true); }}
+                className="w-full text-neutral-500 text-sm hover:text-white transition-colors"
+            >
+              Go Back
             </button>
           </div>
         </div>

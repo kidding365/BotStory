@@ -13,6 +13,7 @@ CRITICAL:
    - DO NOT describe generic landscapes or "scenery".
    - DO NOT describe mountains or water unless the character is literally on them.
    - FOCUS on the character's face, their current clothing, and what they are doing in the room or area.
+   - STYLE: ${world.imageStyleCharacterPre || ''} ${world.imageStyleCharacterPost || ''} ${world.imageStyleNonCharacterPost || ''}
 3. "suggestedActions": Provide exactly 3 short, punchy options for the player.
 4. "stateUpdates": If the narrative implies a change in rank, inventory, or known spells, include the update here.
 
