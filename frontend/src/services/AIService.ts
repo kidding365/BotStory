@@ -114,39 +114,46 @@ Example:
     }
   }
 
-  public async generateImage(prompt: string, modelName: string = "imagen-3.0-generate-001"): Promise<string> {
+  public async generateImage(prompt: string, modelName: string): Promise<string> {
     if (!this.genAI) return "";
 
-    // Some regions/keys don't support Imagen via the standard SDK yet.
-    // If it starts with gemini, we can try to use it as an image generator if supported,
-    // but usually, we want to stick to the dedicated imagen models.
-    const imgModelName = modelName;
-    console.log(`[AIService] Generating image with model: ${imgModelName}`);
+    // Ordered list of models to try for image generation
+    const fallbacks = [
+        modelName, // Try user choice first
+        "imagen-4.0-generate-001",
+        "gemini-3.1-flash-tts-preview",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro"
+    ];
 
-    try {
-        const model = this.genAI.getGenerativeModel({ model: imgModelName });
-        // Set a shorter timeout or simpler config if needed
-        const result = await model.generateContent({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }]
-        });
-        const response = result.response;
+    // Remove duplicates and filter empty
+    const attemptList = Array.from(new Set(fallbacks)).filter(m => !!m);
 
-        // Google Imagen usually returns images in a specific way in the response
-        // For standard AI Studio integration, we check for candidates with data
-        const candidates = response.candidates;
-        if (candidates && candidates[0]?.content?.parts?.[0]?.inlineData) {
-            const data = candidates[0].content.parts[0].inlineData;
-            return `data:${data.mimeType};base64,${data.data}`;
-        }
-    } catch (e: any) {
-        console.error("Image generation failed:", e);
-        if (e.message?.includes('429')) {
-            console.warn("[AIService] Rate limit reached for images. Using fallback.");
+    for (const imgModelName of attemptList) {
+        try {
+            console.log(`[AIService] Attempting image generation with model: ${imgModelName}`);
+            const model = this.genAI.getGenerativeModel({ model: imgModelName });
+
+            const result = await model.generateContent({
+                contents: [{ role: 'user', parts: [{ text: prompt }] }]
+            });
+            const response = result.response;
+
+            const candidates = response.candidates;
+            if (candidates && candidates[0]?.content?.parts?.[0]?.inlineData) {
+                const data = candidates[0].content.parts[0].inlineData;
+                return `data:${data.mimeType};base64,${data.data}`;
+            }
+        } catch (e: any) {
+            console.warn(`[AIService] Image generation failed for ${imgModelName}:`, e.message);
+            // If it's a non-retryable error (like 404 or modality not supported), we continue to next
+            // If it's 429, we also continue to try other models that might have quota
+            continue;
         }
     }
 
-    // Fallback to picsum if Imagen fails or is not accessible
-    // Using a more detailed seed based on the prompt to avoid generic scenery
+    // Ultimate Fallback to picsum if all AI models fail
+    console.warn("[AIService] All AI image models failed or reached quota. Using stock fallback.");
     const seed = encodeURIComponent(prompt.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 50));
     return `https://picsum.photos/seed/${seed}/800/600`;
   }
