@@ -1,0 +1,24 @@
+{
+  "id": "test-world",
+  "name": "The Glitched Void",
+  "globalPrompt": "The world is a shimmering void where logic is fluid.",
+  "instructionBlocks": [
+    { "id": "main_quest", "content": "Find the Core of the Void.", "isActive": true }
+  ],
+  "lorebook": [
+    { "id": "void_essence", "keywords": ["essence", "shimmer"], "content": "Void essence allows for teleportation." }
+  ],
+  "trackedItems": [
+    { "id": "essence_count", "name": "Void Essence", "type": "Number", "value": 0, "visibility": "Player", "updateInstructions": "Increase when essence is found." }
+  ],
+  "triggers": [
+    {
+      "id": "found_essence",
+      "conditions": [{ "type": "event", "event": "find_essence" }],
+      "effects": [
+        { "type": "setValue", "itemId": "essence_count", "value": 1 },
+        { "type": "message", "message": "You found a shimmering piece of Void Essence!" }
+      ]
+    }
+  ]
+}

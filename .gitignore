@@ -1,0 +1,69 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+coverage/
+
+# next.js
+.next/
+out/
+
+# production
+build/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
+.env*
+.env.local
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# python (no longer used)
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# editor
+.vscode/
+.idea/
+
+# os
+Thumbs.db
+
+# secrets — never commit keys
+Gemini_key.txt
+*.key
+*.pem
+service-worker.js
+
+# local agent tooling
+.agent-browser/
+.browser-use/
+.browser_use_venv/
+skills-lock.json
+
+# build artifacts
+app/.next/
+app/out/
+app/node_modules/
+app/dev.log
+*.log
