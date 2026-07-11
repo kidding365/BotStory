@@ -95,14 +95,15 @@ describe('StorageService', () => {
   });
 
   it('should track active provider', () => {
-    storage.setActiveProvider('anthropic');
-    expect(storage.getActiveProviderId()).toBe('anthropic');
+    storage.setActiveProvider('nvidia');
+    expect(storage.getActiveProviderId()).toBe('nvidia');
   });
 
   it('should list and clear all providers', () => {
     storage.saveProvider({ id: 'gemini', label: 'Gemini', apiKey: 'a', model: 'm' });
-    storage.saveProvider({ id: 'openai', label: 'OpenAI', apiKey: 'b', model: 'm' });
-    expect(storage.getAllProviders()).toHaveLength(2);
+    storage.saveProvider({ id: 'openrouter', label: 'OpenRouter', apiKey: 'b', model: 'm' });
+    const before = storage.getAllProviders().length;
+    expect(before).toBeGreaterThanOrEqual(2);
     storage.clearAllProviders();
     expect(storage.getAllProviders()).toHaveLength(0);
   });

@@ -7,7 +7,7 @@ A client-side, **BYOK** (Bring-Your-Own-Key) clone of [infiniteworlds.app](https
 ## Features
 
 - **BYOK** — paste your own API key in the browser. No backend, no proxy, no rate limits from us. Your key is stored only in your browser's `localStorage` and sent directly to the provider.
-  - Supported providers: **Google AI Studio (Gemini)**, **OpenAI**, **Anthropic Claude**, **OpenRouter**, and any **OpenAI-compatible** endpoint.
+  - Supported providers: **Google AI Studio (Gemini)** (with Imagen for images), **OpenRouter**, **NVIDIA NIM**, and any **OpenAI-compatible** endpoint.
 - **Image generation** for Gemini via Imagen (if you set an image model).
 - **JSON import** — paste any world exported from infiniteworlds.app (turn on *Show raw JSON* in the World Editor → Misc advanced features) and BotStory will adapt it automatically. Or use the built-in sample world.
 - **Full game loop**: tracked items, instruction blocks, keyword-triggered lore, trigger events with effects (messages, state updates, instruction block rewrites, end-game), state snapshots, regenerate-turn, narrative override, image steering, victory/defeat conditions.
@@ -20,7 +20,7 @@ A client-side, **BYOK** (Bring-Your-Own-Key) clone of [infiniteworlds.app](https
 ```
 JSON world schema ─┐
                    │
-Player action  ────┼─► PromptComposer ─► LLM (Gemini/OpenAI/...) ─► AIOutcome
+Player action  ────┼─► PromptComposer ─► LLM (Gemini/OpenRouter/NVIDIA/...) ─► AIOutcome
                    │                                                          │
 Active blocks   ───┘                                                          ▼
 Recent history  ──────────────────────────────────────────────► StateManager + TriggerProcessor

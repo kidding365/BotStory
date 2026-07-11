@@ -12,21 +12,17 @@ const PRESETS: Record<ProviderId, { label: string; defaultModel: string; default
     defaultImageModel: 'imagen-3.0-generate-002',
     placeholder: 'AIza...',
   },
-  openai: {
-    label: 'OpenAI',
-    defaultModel: 'gpt-4o-mini',
-    placeholder: 'sk-...',
-  },
-  anthropic: {
-    label: 'Anthropic Claude',
-    defaultModel: 'claude-3-5-sonnet-latest',
-    placeholder: 'sk-ant-...',
-  },
   openrouter: {
     label: 'OpenRouter',
     defaultModel: 'openai/gpt-4o-mini',
     endpoint: 'https://openrouter.ai/api/v1/chat/completions',
     placeholder: 'sk-or-...',
+  },
+  nvidia: {
+    label: 'NVIDIA NIM',
+    defaultModel: 'meta/llama-3.1-70b-instruct',
+    endpoint: 'https://integrate.api.nvidia.com/v1/chat/completions',
+    placeholder: 'nvapi-...',
   },
   custom: {
     label: 'Custom (OpenAI-compatible)',
@@ -98,7 +94,7 @@ export default function SettingsPage() {
             BotStory is 100% client-side. Your API keys are stored <strong>only in your browser&apos;s
             localStorage</strong>. They are sent directly from your browser to your chosen LLM provider when
             a turn is generated. Nothing is proxied through any third-party server. You can use
-            Google AI Studio (Gemini) for free, OpenAI, Anthropic, OpenRouter, or any OpenAI-compatible
+            Google AI Studio (Gemini) for free, OpenRouter, NVIDIA NIM, or any OpenAI-compatible
             endpoint.
           </p>
         </div>

@@ -172,7 +172,7 @@ export interface TurnResult {
   imageDataUrl?: string;
 }
 
-export type ProviderId = 'gemini' | 'openai' | 'anthropic' | 'openrouter' | 'custom';
+export type ProviderId = 'gemini' | 'openrouter' | 'nvidia' | 'custom';
 
 export interface ProviderConfig {
   id: ProviderId;

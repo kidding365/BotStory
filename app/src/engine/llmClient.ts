@@ -14,14 +14,25 @@ export class LLMClient {
     switch (config.id) {
       case 'gemini':
         return this.callGemini(config, systemPrompt, userPrompt, opts);
-      case 'openai':
-        return this.callOpenAI(config, systemPrompt, userPrompt, opts);
-      case 'anthropic':
-        return this.callAnthropic(config, systemPrompt, userPrompt, opts);
       case 'openrouter':
-        return this.callOpenAI(config, systemPrompt, userPrompt, opts, true);
+        return this.callOpenAICompatible(config, systemPrompt, userPrompt, opts, {
+          url: 'https://openrouter.ai/api/v1/chat/completions',
+          extraHeaders: {
+            'HTTP-Referer': 'https://botstory.local',
+            'X-Title': 'BotStory',
+          },
+          defaultModel: 'openai/gpt-4o-mini',
+        });
+      case 'nvidia':
+        return this.callOpenAICompatible(config, systemPrompt, userPrompt, opts, {
+          url: 'https://integrate.api.nvidia.com/v1/chat/completions',
+          defaultModel: 'meta/llama-3.1-70b-instruct',
+        });
       case 'custom':
-        return this.callOpenAI(config, systemPrompt, userPrompt, opts, true);
+        return this.callOpenAICompatible(config, systemPrompt, userPrompt, opts, {
+          url: config.endpoint || '',
+          defaultModel: 'gpt-4o-mini',
+        });
       default:
         throw new Error(`Unsupported provider: ${config.id}`);
     }
@@ -108,19 +119,18 @@ export class LLMClient {
     return this.extractJson(text);
   }
 
-  private async callOpenAI(
+  private async callOpenAICompatible(
     config: ProviderConfig,
     systemPrompt: string,
     userPrompt: string,
     opts: LLMOptions,
-    openRouter = false
+    cfg: { url: string; defaultModel: string; extraHeaders?: Record<string, string> }
   ): Promise<AIOutcome> {
-    const model = config.model || (openRouter ? 'openai/gpt-4o-mini' : 'gpt-4o-mini');
-    const url =
-      config.endpoint ||
-      (openRouter
-        ? 'https://openrouter.ai/api/v1/chat/completions'
-        : 'https://api.openai.com/v1/chat/completions');
+    const url = cfg.url || config.endpoint || '';
+    if (!url) {
+      throw new Error('Provider endpoint is not configured.');
+    }
+    const model = config.model || cfg.defaultModel;
     const body = {
       model,
       messages: [
@@ -134,10 +144,8 @@ export class LLMClient {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${config.apiKey}`,
     };
-    if (openRouter) {
-      headers['HTTP-Referer'] = 'https://botstory.local';
-      headers['X-Title'] = 'BotStory';
-    }
+    if (cfg.extraHeaders) Object.assign(headers, cfg.extraHeaders);
+
     const res = await fetch(url, {
       method: 'POST',
       headers,
@@ -146,46 +154,11 @@ export class LLMClient {
     });
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`LLM API error: ${res.status} ${err}`);
+      throw new Error(`LLM API error (${url}): ${res.status} ${err}`);
     }
     const data = await res.json();
     const text = data?.choices?.[0]?.message?.content;
     if (!text) throw new Error('LLM returned no content.');
-    return this.extractJson(text);
-  }
-
-  private async callAnthropic(
-    config: ProviderConfig,
-    systemPrompt: string,
-    userPrompt: string,
-    opts: LLMOptions
-  ): Promise<AIOutcome> {
-    const model = config.model || 'claude-3-5-sonnet-latest';
-    const url = config.endpoint || 'https://api.anthropic.com/v1/messages';
-    const body = {
-      model,
-      system: systemPrompt + '\n\nIMPORTANT: Respond ONLY with a JSON object matching this schema:\n' + this.buildSchema(),
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: userPrompt }],
-    };
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': config.apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify(body),
-      signal: opts.signal,
-    });
-    if (!res.ok) {
-      const err = await res.text();
-      throw new Error(`Anthropic API error: ${res.status} ${err}`);
-    }
-    const data = await res.json();
-    const text = data?.content?.[0]?.text;
-    if (!text) throw new Error('Anthropic returned no content.');
     return this.extractJson(text);
   }
 

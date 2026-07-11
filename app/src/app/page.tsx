@@ -82,7 +82,7 @@ export default function HomePage() {
           <ol className="list-decimal list-inside text-zinc-300 space-y-2">
             <li>
               Go to <Link href="/settings" className="text-blue-400 underline">Settings</Link> and
-              paste your Google AI Studio, OpenAI, Anthropic, OpenRouter, or any OpenAI-compatible
+              paste your Google AI Studio, OpenRouter, NVIDIA NIM, or any OpenAI-compatible
               API key. Stored in localStorage only.
             </li>
             <li>
