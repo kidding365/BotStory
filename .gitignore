@@ -51,6 +51,9 @@ Thumbs.db
 
 # secrets — never commit keys
 Gemini_key.txt
+gemini_key.txt
+nvidia_key.txt
+openrouter_key.txt
 *.key
 *.pem
 service-worker.js

@@ -37,10 +37,26 @@ function PlayPage() {
   const historyRef = useRef<HTMLDivElement | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
+  // Refs that always mirror the latest state so async callbacks (e.g. setTimeout
+  // after init, or the auto firstInput trigger) read fresh values.
+  const worldRef = useRef<World | null>(null);
+  const instanceRef = useRef<StoryInstance | null>(null);
+  const providerRef = useRef<ProviderConfig | null>(null);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    worldRef.current = world;
+  }, [world]);
+  useEffect(() => {
+    instanceRef.current = instance;
+  }, [instance]);
+  useEffect(() => {
+    providerRef.current = provider;
+  }, [provider]);
 
   useEffect(() => {
     if (historyRef.current) {
@@ -59,13 +75,16 @@ function PlayPage() {
       return;
     }
     setWorld(w);
+    worldRef.current = w;
     const p = storage.getProvider(storage.getActiveProviderId());
     setProvider(p);
+    providerRef.current = p;
 
     if (instanceId) {
       const i = await storage.getInstance(instanceId);
       if (i) {
         setInstance(i);
+        instanceRef.current = i;
         const c = w.possibleCharacters.find((x) => x.characterId === i.characterId) || null;
         setChar(c);
         return;
@@ -88,13 +107,23 @@ function PlayPage() {
     };
     await storage.saveInstance(newInst);
     setInstance(newInst);
+    instanceRef.current = newInst;
     setChar(w.possibleCharacters.find((c) => c.characterId === characterId) || null);
 
-    // Auto-trigger firstInput if the world provides one
+    // Auto-trigger firstInput if the world provides one.
+    // Use refs so we read the latest provider+instance regardless of React batching.
     if (w.firstInput) {
-      setTimeout(() => {
-        void doAction({ text: w.firstInput! });
-      }, 300);
+      const activeProvider = providerRef.current;
+      if (!activeProvider || !activeProvider.apiKey) {
+        setError(
+          `World has a "firstInput" (${w.firstInput.slice(0, 60)}…) but no API key is configured for the active provider (${activeProvider?.label ?? 'unknown'}). Open Settings to add one, then click Send.`
+        );
+      } else {
+        // Defer to allow React to finish painting the initial UI before the request.
+        setTimeout(() => {
+          void doAction({ text: w.firstInput! });
+        }, 400);
+      }
     }
   }
 
@@ -105,25 +134,30 @@ function PlayPage() {
   }, [worldId, instanceId]);
 
   async function doAction(action: UserAction) {
-    if (!world || !instance || !provider) {
-      setError('Missing world, instance, or API key. Configure Settings first.');
+    // Read fresh values from refs, never from stale closure.
+    const w = worldRef.current;
+    const inst = instanceRef.current;
+    const prov = providerRef.current;
+
+    if (!w || !inst || !prov) {
+      setError(
+        'Missing world, instance, or API key. Wait for the game to finish loading, then try again. ' +
+          `state: w=${!!w}, i=${!!inst}, p=${!!prov}.`
+      );
       return;
     }
-    if (!provider.apiKey) {
-      setError(`No API key set for ${provider.label}. Open Settings to add one.`);
+    if (!prov.apiKey) {
+      setError(`No API key set for ${prov.label}. Open Settings to add one.`);
       return;
     }
     setBusy(true);
     setError('');
     try {
-      const result = await orchestrator.executeTurn(
-        world.id,
-        instance.id,
-        action,
-        provider,
-        { generateImage: !!provider.imageModel }
-      );
+      const result = await orchestrator.executeTurn(w.id, inst.id, action, prov, {
+        generateImage: !!prov.imageModel,
+      });
       setInstance(result.updatedInstance);
+      instanceRef.current = result.updatedInstance;
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -132,18 +166,22 @@ function PlayPage() {
   }
 
   async function regenerate() {
-    if (!world || !instance || !provider) return;
+    const w = worldRef.current;
+    const inst = instanceRef.current;
+    const prov = providerRef.current;
+    if (!w || !inst || !prov) return;
     setBusy(true);
     setError('');
     try {
       const result = await orchestrator.regenerateLastTurn(
-        world.id,
-        instance.id,
-        provider,
+        w.id,
+        inst.id,
+        prov,
         undefined,
-        { generateImage: !!provider.imageModel }
+        { generateImage: !!prov.imageModel }
       );
       setInstance(result.updatedInstance);
+      instanceRef.current = result.updatedInstance;
     } catch (e) {
       setError((e as Error).message);
     } finally {

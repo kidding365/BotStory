@@ -11,30 +11,47 @@ export class LLMClient {
     userPrompt: string,
     opts: LLMOptions = {}
   ): Promise<AIOutcome> {
-    switch (config.id) {
-      case 'gemini':
-        return this.callGemini(config, systemPrompt, userPrompt, opts);
-      case 'openrouter':
-        return this.callOpenAICompatible(config, systemPrompt, userPrompt, opts, {
-          url: 'https://openrouter.ai/api/v1/chat/completions',
-          extraHeaders: {
-            'HTTP-Referer': 'https://botstory.local',
-            'X-Title': 'BotStory',
-          },
-          defaultModel: 'openai/gpt-4o-mini',
-        });
-      case 'nvidia':
-        return this.callOpenAICompatible(config, systemPrompt, userPrompt, opts, {
-          url: 'https://integrate.api.nvidia.com/v1/chat/completions',
-          defaultModel: 'meta/llama-3.1-70b-instruct',
-        });
-      case 'custom':
-        return this.callOpenAICompatible(config, systemPrompt, userPrompt, opts, {
-          url: config.endpoint || '',
-          defaultModel: 'gpt-4o-mini',
-        });
-      default:
-        throw new Error(`Unsupported provider: ${config.id}`);
+    try {
+      switch (config.id) {
+        case 'gemini':
+          return await this.callGemini(config, systemPrompt, userPrompt, opts);
+        case 'openrouter':
+          return await this.callOpenAICompatible(config, systemPrompt, userPrompt, opts, {
+            url: 'https://openrouter.ai/api/v1/chat/completions',
+            extraHeaders: {
+              'HTTP-Referer': 'https://botstory.local',
+              'X-Title': 'BotStory',
+            },
+            defaultModel: 'openai/gpt-4o-mini',
+          });
+        case 'nvidia':
+          return await this.callNvidia(config, systemPrompt, userPrompt, opts);
+        case 'custom':
+          return await this.callOpenAICompatible(config, systemPrompt, userPrompt, opts, {
+            url: config.endpoint || '',
+            defaultModel: 'gpt-4o-mini',
+          });
+        default:
+          throw new Error(`Unsupported provider: ${config.id}`);
+      }
+    } catch (e) {
+      const msg = (e as Error).message || String(e);
+      // Browser throws a generic "Failed to fetch" / "NetworkError" on CORS
+      // failures. Surface a clearer hint for the providers known to be blocked.
+      if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) {
+        if (config.id === 'nvidia') {
+          throw new Error(
+            'Network error reaching NVIDIA. NVIDIA integrate.api.nvidia.com does NOT allow browser-direct CORS requests, so it cannot be used from a static GitHub Pages deployment without a small proxy. ' +
+              'Either switch to Gemini / OpenRouter / Custom, or deploy the included Cloudflare Worker (~5 min, free tier) and point the Custom provider at it. See README › "NVIDIA via a Cloudflare Worker".'
+          );
+        }
+        throw new Error(
+          'Network error reaching the LLM provider (likely CORS or offline). ' +
+            'If you are using a custom endpoint, ensure it allows Access-Control-Allow-Origin for this site. ' +
+            `(provider: ${config.label})`
+        );
+      }
+      throw e;
     }
   }
 
@@ -85,7 +102,7 @@ export class LLMClient {
     userPrompt: string,
     opts: LLMOptions
   ): Promise<AIOutcome> {
-    const model = config.model || 'gemini-1.5-flash';
+    const model = config.model || 'gemini-2.5-flash';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(config.apiKey)}`;
     const body = {
       contents: [
@@ -162,8 +179,37 @@ export class LLMClient {
     return this.extractJson(text);
   }
 
+  /**
+   * NVIDIA NIM does not allow browser-direct CORS requests. If you've deployed
+   * the included Cloudflare Worker (`/proxy/cloudflare-worker.js`), point
+   * `config.endpoint` (the Custom provider endpoint input) at the worker URL,
+   * and we'll forward the Authorization header server-side. If no proxy is
+   * configured, this will fail with a clear hint.
+   */
+  private async callNvidia(
+    config: ProviderConfig,
+    systemPrompt: string,
+    userPrompt: string,
+    opts: LLMOptions
+  ): Promise<AIOutcome> {
+    const proxyUrl = config.endpoint?.trim();
+    if (!proxyUrl) {
+      throw new Error(
+        'NVIDIA NIM requires the Custom provider "endpoint" field to point at a small CORS proxy (e.g. the included Cloudflare Worker). ' +
+          'Go to Settings → Custom → Endpoint and paste your Worker URL, then click the radio button on "Custom" instead of "NVIDIA NIM". ' +
+          'See README › "NVIDIA via a Cloudflare Worker".'
+      );
+    }
+    // Forward to the proxy. The worker accepts the same OpenAI-shape body,
+    // adds the server-side NVIDIA Authorization header, and returns the OpenAI-shape response.
+    return this.callOpenAICompatible(config, systemPrompt, userPrompt, opts, {
+      url: proxyUrl,
+      defaultModel: config.model || 'meta/llama-3.1-70b-instruct',
+    });
+  }
+
   private async geminiImage(config: ProviderConfig, prompt: string): Promise<string | null> {
-    const model = config.imageModel || 'imagen-3.0-generate-002';
+    const model = config.imageModel || 'imagen-4.0-fast-generate-001';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:predict?key=${encodeURIComponent(config.apiKey)}`;
     const body = {
       instances: [{ prompt }],

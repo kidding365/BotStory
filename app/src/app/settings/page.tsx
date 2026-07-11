@@ -8,8 +8,8 @@ import { ProviderConfig, ProviderId } from '@/engine/types';
 const PRESETS: Record<ProviderId, { label: string; defaultModel: string; defaultImageModel?: string; endpoint?: string; placeholder: string }> = {
   gemini: {
     label: 'Google AI Studio (Gemini)',
-    defaultModel: 'gemini-1.5-flash',
-    defaultImageModel: 'imagen-3.0-generate-002',
+    defaultModel: 'gemini-2.5-flash',
+    defaultImageModel: 'imagen-4.0-fast-generate-001',
     placeholder: 'AIza...',
   },
   openrouter: {
@@ -92,10 +92,10 @@ export default function SettingsPage() {
           <h2 className="text-lg font-semibold text-zinc-200">About Bring-Your-Own-Key</h2>
           <p className="text-sm text-zinc-400 leading-relaxed">
             BotStory is 100% client-side. Your API keys are stored <strong>only in your browser&apos;s
-            localStorage</strong>. They are sent directly from your browser to your chosen LLM provider when
-            a turn is generated. Nothing is proxied through any third-party server. You can use
-            Google AI Studio (Gemini) for free, OpenRouter, NVIDIA NIM, or any OpenAI-compatible
-            endpoint.
+            localStorage</strong> and sent directly to the provider. Nothing is proxied through any
+            third-party server — except an optional tiny Cloudflare Worker for NVIDIA (see NVIDIA card
+            below). You can use Google AI Studio (Gemini), OpenRouter, NVIDIA NIM (via Worker), or any
+            OpenAI-compatible endpoint.
           </p>
         </div>
 
@@ -164,9 +164,11 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {(id === 'custom' || id === 'openrouter') && (
+                {(id === 'custom' || id === 'openrouter' || id === 'nvidia') && (
                   <div>
-                    <label className="text-xs text-zinc-500">Endpoint</label>
+                    <label className="text-xs text-zinc-500">
+                      Endpoint{id === 'nvidia' && ' (Required for NVIDIA — see note below)'}
+                    </label>
                     <input
                       type="text"
                       placeholder="https://..."
@@ -174,6 +176,22 @@ export default function SettingsPage() {
                       onChange={(e) => updateProvider(id, { endpoint: e.target.value })}
                       className="w-full p-2 bg-zinc-800 border border-zinc-700 rounded text-white outline-none text-sm"
                     />
+                  </div>
+                )}
+
+                {id === 'nvidia' && (
+                  <div className="text-xs text-amber-300 bg-amber-950/30 border border-amber-800 rounded p-3">
+                    <strong>NVIDIA NIM</strong> does not allow browser-direct CORS requests, so it cannot
+                    be reached from this static site without a small proxy. Either:
+                    <ul className="list-disc list-inside mt-2 space-y-1">
+                      <li>
+                        Paste your Cloudflare Worker URL above (deploy{' '}
+                        <code className="text-amber-200">proxy/cloudflare-worker.js</code> from this
+                        repo, free tier, ~5 min) — and select <strong>Custom</strong> as the active
+                        provider instead.
+                      </li>
+                      <li>Or switch the active provider to Gemini / OpenRouter.</li>
+                    </ul>
                   </div>
                 )}
               </div>
