@@ -83,17 +83,62 @@ export class LLMClient {
 
   private extractJson(text: string): AIOutcome {
     const trimmed = text.trim();
+    // First try direct parse
     try {
       return JSON.parse(trimmed) as AIOutcome;
     } catch {
-      // try to find the first {...} block
-      const start = trimmed.indexOf('{');
-      const end = trimmed.lastIndexOf('}');
-      if (start === -1 || end === -1) {
-        throw new Error('LLM did not return valid JSON.');
+      // Try to extract a balanced JSON object
+      const extracted = this.findBalancedJson(trimmed);
+      if (extracted) {
+        try {
+          return JSON.parse(extracted) as AIOutcome;
+        } catch {
+          // fall through
+        }
       }
-      return JSON.parse(trimmed.slice(start, end + 1)) as AIOutcome;
+      // Last resort: try to fix common issues (trailing commas, etc.)
+      const fixed = this.fixCommonJsonIssues(trimmed);
+      try {
+        return JSON.parse(fixed) as AIOutcome;
+      } catch {
+        // give up
+        throw new Error(`LLM did not return valid JSON. Raw response (first 500 chars): ${trimmed.slice(0, 500)}`);
+      }
     }
+  }
+
+  private findBalancedJson(text: string): string | null {
+    let depth = 0;
+    let start = -1;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (ch === '{') {
+        if (depth === 0) start = i;
+        depth++;
+      } else if (ch === '}') {
+        depth--;
+        if (depth === 0 && start !== -1) {
+          return text.slice(start, i + 1);
+        }
+        if (depth < 0) return null;
+      }
+    }
+    return null;
+  }
+
+  private fixCommonJsonIssues(text: string): string {
+    // Remove markdown code fences if present
+    let t = text.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
+    // Fix trailing commas in objects/arrays
+    t = t.replace(/,(\s*[}\]])/g, '$1');
+    // Fix single quotes to double quotes (simple cases)
+    t = t.replace(/'([^']*)':/g, '"$1":');
+    // Remove any trailing text after the closing brace of the main object
+    const lastBrace = t.lastIndexOf('}');
+    if (lastBrace !== -1 && lastBrace < t.length - 1) {
+      t = t.slice(0, lastBrace + 1);
+    }
+    return t;
   }
 
   private async callGemini(
