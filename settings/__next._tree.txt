@@ -1,0 +1,2 @@
+:HL["/BotStory/_next/static/chunks/1vkq1oh_9onf1.css","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"settings","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"kxlwF4nAo5fbCGO3Fxq8k"}
