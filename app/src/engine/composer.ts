@@ -18,7 +18,8 @@ export class PromptComposer {
     lines.push('7. In "visualVariables", describe the current visual scene in detail.');
     lines.push('8. In "triggeredEvents", list any world events that occurred (e.g. "found_treasure", "I_enter_the_Wild_Oaks") so trigger conditions can fire.');
     lines.push('9. If the player wins, set "ended": true and put the final epilogue in "endMessage".');
-    lines.push('10. NEVER output markdown code fences or any text outside the JSON.');
+    lines.push('10. "evaluation" should be "NEUTRAL" for an ordinary turn. Use "SUCCESS" ONLY when the player actually achieves the world\'s victory condition this turn, and "FAILURE" ONLY when the player actually meets the defeat condition this turn. Use "DENIED" when the player\'s action is impossible in fiction. Do NOT default to "SUCCESS".');
+    lines.push('11. NEVER output markdown code fences or any text outside the JSON.');
     return lines.join('\n');
   }
 
@@ -86,6 +87,13 @@ export class PromptComposer {
         parts.push(l.content);
         parts.push('--- END LORE ---');
       }
+    }
+
+    if (instance.summary) {
+      parts.push('');
+      parts.push('=== LONG-TERM SUMMARY ===');
+      parts.push(instance.summary);
+      if (instance.summaryTurn) parts.push(`(summarised up to turn ${instance.summaryTurn})`);
     }
 
     if (instance.history.length > 0) {
