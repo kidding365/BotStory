@@ -105,7 +105,7 @@ export function importWorld(raw: unknown): ImportResult {
     }
   );
 
-  if (trackedItems.length === 0 && Array.isArray(raw.trackedItems) === false) {
+  if (trackedItems.length === 0 && !Array.isArray(raw.trackedItems)) {
     warnings.push('No trackedItems field found; defaulting to empty list.');
   }
 

@@ -32,7 +32,7 @@ function normalizeCondition(c: TriggerEvent['triggerConditions'][number]): Norma
 }
 
 function normalizeEffect(e: TriggerEffect): NormalizedEffect {
-  const data = typeof e.data === 'string' ? e.data : e.data;
+  const data = e.data;
   switch (e.type) {
     case 'effectSetTrackedItemValue': {
       const d = (data as { action?: string; newValue?: string | number; trackedItemID?: string }) || {};
