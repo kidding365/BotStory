@@ -54,8 +54,12 @@ Gemini_key.txt
 gemini_key.txt
 nvidia_key.txt
 openrouter_key.txt
+cloudflare_key.txt
+cloudflare_account.txt
 *.key
 *.pem
+*_key.txt
+*_api_key.txt
 service-worker.js
 
 # local agent tooling
@@ -70,3 +74,4 @@ app/out/
 app/node_modules/
 app/dev.log
 *.log
+graphify-out/
