@@ -86,6 +86,20 @@ export default function WorldsPage() {
     await refresh();
   }
 
+  async function handleMakeCopy(w: World) {
+    const copy: World = {
+      ...w,
+      id:
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `copy_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      title: `${w.title} (copy)`,
+      importedAt: Date.now(),
+    };
+    await storage.saveWorld(copy);
+    await refresh();
+  }
+
   function loadSample() {
     setImportText(JSON.stringify(SAMPLE_IW, null, 2));
   }
@@ -145,6 +159,20 @@ export default function WorldsPage() {
                       >
                         ▶ Play new
                       </Link>
+                      <Link
+                        href={`/worlds/${encodeURIComponent(w.id)}/edit`}
+                        className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-sm rounded"
+                        title="Edit this world"
+                      >
+                        ✎ Edit
+                      </Link>
+                      <button
+                        onClick={() => handleMakeCopy(w)}
+                        className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-sm rounded"
+                        title="Make a copy of this world"
+                      >
+                        ⎘ Copy
+                      </button>
                     </div>
                     {myInstances.length > 0 && (
                       <div className="border-t border-zinc-800 pt-2 space-y-1">
@@ -315,8 +343,9 @@ const SAMPLE_IW = {
     text: 'You step off the island — but you carry its memory forever.',
   },
   defeatCondition: {
-    condition: 'The player\'s health reaches 0.',
+    condition: '{ "trackedItemID": "hp", "value": 0 }',
     text: 'The tide claims you.',
+    alreadyFired: false,
   },
   mature: false,
   nsfw: false,
