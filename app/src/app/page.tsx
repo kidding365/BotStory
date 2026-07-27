@@ -3,25 +3,24 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { storage } from '@/engine/storage';
-import { World, StoryInstance, ProviderConfig } from '@/engine/types';
+import { World, StoryInstance, TextProviderConfig, ImageProviderConfig } from '@/engine/types';
 
 export default function HomePage() {
   const [worlds, setWorlds] = useState<World[]>([]);
   const [instances, setInstances] = useState<StoryInstance[]>([]);
-  const [providers, setProviders] = useState<ProviderConfig[]>([]);
-  const [activeId, setActiveId] = useState<string>('');
+  const [textProvider, setTextProvider] = useState<TextProviderConfig | null>(null);
+  const [imageProvider, setImageProvider] = useState<ImageProviderConfig | null>(null);
 
   useEffect(() => {
     void (async () => {
       setWorlds(await storage.getAllWorlds());
       setInstances(await storage.getAllInstances());
-      setProviders(storage.getAllProviders());
-      setActiveId(storage.getActiveProviderId());
+      setTextProvider(storage.getTextProvider());
+      setImageProvider(storage.getImageProvider());
     })();
   }, []);
 
-  const hasKey = providers.some((p) => p.apiKey && p.apiKey.length > 8);
-  const activeProvider = providers.find((p) => p.id === activeId);
+  const hasKey = !!textProvider && !!textProvider.apiKey && textProvider.apiKey.length > 8;
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100">
@@ -59,7 +58,7 @@ export default function HomePage() {
             ok={hasKey}
             okText="API key configured"
             warnText="No API key yet"
-            hint={activeProvider ? `Active: ${activeProvider.label} (${activeProvider.model})` : 'Set one in Settings.'}
+            hint={textProvider ? `Story: ${textProvider.label} (${textProvider.model})${imageProvider ? ` · Image: ${imageProvider.label}` : ''}` : 'Set one in Settings.'}
           />
           <StatusCard
             label="Worlds"
