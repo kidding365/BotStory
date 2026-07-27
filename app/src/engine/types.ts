@@ -110,6 +110,8 @@ export interface World {
   version?: string;
   source?: 'native' | 'infiniteworlds';
   importedAt?: number;
+  /** Optional prompt the summariser uses to decide what to keep in long-term memory. */
+  summarizationInstructions?: string;
   // Engine-internal legacy fields
   globalPrompt?: string;
   lorebook?: LoreBookEntry[];
@@ -127,6 +129,11 @@ export interface StoryInstance {
   turnNumber: number;
   history: TurnMessage[];
   lastOutcome?: AIOutcome;
+  lastSnapshot?: ReturnType<
+    import('./stateManager').StateManager['snapshot']
+  > | null;
+  summary?: string;
+  summaryTurn?: number;
   createdAt: number;
   updatedAt: number;
   ended?: boolean;
@@ -142,6 +149,7 @@ export interface TurnMessage {
   suggestedActions?: string[];
   visualPrompt?: string;
   imageDataUrl?: string;
+  whereWhen?: string;
 }
 
 export interface AIOutcome {
@@ -172,8 +180,8 @@ export interface TurnResult {
   imageDataUrl?: string;
 }
 
+/** Legacy single-provider config (pre-split). Used by storage migration only. */
 export type ProviderId = 'gemini' | 'openrouter' | 'nvidia' | 'custom';
-
 export interface ProviderConfig {
   id: ProviderId;
   label: string;
@@ -181,4 +189,35 @@ export interface ProviderConfig {
   endpoint?: string;
   model: string;
   imageModel?: string;
+}
+
+/** Text (storyteller) providers — always browser-direct OR via the Worker for NVIDIA. */
+export type TextProviderId = 'gemini' | 'openrouter' | 'nvidia' | 'custom';
+export interface TextProviderConfig {
+  id: TextProviderId;
+  label: string;
+  apiKey: string;
+  model: string;
+  /** Required for nvidia & custom — points at the Worker (or any OpenAI-compat endpoint). */
+  endpoint?: string;
+}
+
+/** Image providers. 'none' is first-class so image gen can be disabled. */
+export type ImageProviderId = 'none' | 'gemini-imagen' | 'cloudflare' | 'custom';
+export interface ImageProviderConfig {
+  id: ImageProviderId;
+  label: string;
+  apiKey: string;            // Gemini key (for gemini-imagen) OR Cloudflare API token (for cloudflare) OR custom key
+  model: string;             // e.g. 'imagen-4.0-fast-generate-001', '@cf/black-forest-labs/flux-1-schnell'
+  accountId?: string;        // Cloudflare account id (required for cloudflare)
+  /** Worker URL for cloudflare; or direct endpoint for custom. */
+  endpoint?: string;
+  /** Optional style-preset string prepended to the prompt (free text). */
+  style?: string;
+}
+
+/** The Worker proxy configuration — BYOK. The Worker URL is shared by nvidia text + cloudflare image. */
+export interface WorkerConfig {
+  /** Deployed Worker URL, e.g. https://botstory-proxy.yourname.workers.dev */
+  url: string;
 }

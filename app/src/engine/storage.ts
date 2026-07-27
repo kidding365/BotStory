@@ -1,5 +1,5 @@
 import { openDB, IDBPDatabase } from 'idb';
-import { World, StoryInstance, ProviderConfig, ProviderId } from './types';
+import { World, StoryInstance, TextProviderConfig, ImageProviderConfig, WorkerConfig, TextProviderId, ProviderId } from './types';
 
 const DB_NAME = 'BotStoryDB';
 const DB_VERSION = 2;
@@ -44,7 +44,17 @@ export class StorageService {
 
   async deleteWorld(id: string): Promise<void> {
     const db = await this.getDB();
-    await db.delete(STORE_WORLDS, id);
+    const tx = db.transaction([STORE_WORLDS, STORE_INSTANCES], 'readwrite');
+    try {
+      const insts = (await tx.objectStore(STORE_INSTANCES).getAll()) as StoryInstance[];
+      for (const i of insts) {
+        if (i.worldId === id) await tx.objectStore(STORE_INSTANCES).delete(i.id);
+      }
+      await tx.objectStore(STORE_WORLDS).delete(id);
+      await tx.done;
+    } catch {
+      await db.delete(STORE_WORLDS, id);
+    }
   }
 
   async getAllWorlds(): Promise<World[]> {
@@ -80,24 +90,136 @@ export class StorageService {
     await db.delete(STORE_INSTANCES, id);
   }
 
-  saveProvider(config: ProviderConfig): void {
+  // ── Text / Image / Worker provider configs (localStorage) ────────
+
+  /** Safe JSON parse wrapper to guard against corrupt localStorage blobs. */
+  private safeParse<T>(raw: string | null, fallback: T): T {
+    if (!raw) return fallback;
+    try {
+      return JSON.parse(raw) as T;
+    } catch {
+      return fallback;
+    }
+  }
+
+  // ── Text (story) provider ────────────────────────────────────────
+
+  saveTextProvider(config: TextProviderConfig): void {
+    localStorage.setItem('botstory_text_provider', JSON.stringify(config));
+  }
+
+  getTextProvider(): TextProviderConfig | null {
+    const raw = localStorage.getItem('botstory_text_provider');
+    return this.safeParse<TextProviderConfig | null>(raw, null);
+  }
+
+  /** Migrate old single-provider slot into the new text-provider slot. Returns the active id so the caller knows what to load. */
+  migrateTextProvider(): TextProviderConfig | null {
+    const oldRaw = localStorage.getItem('botstory_providers');
+    if (!oldRaw) return null;
+    const old = this.safeParse<Record<string, { id: string; label: string; apiKey: string; endpoint?: string; model: string }>>(oldRaw, {});
+    const activeId = localStorage.getItem('botstory_active_provider') as TextProviderId || 'gemini';
+    const active = (old[activeId] || Object.values(old)[0]) as { id: TextProviderId; label: string; apiKey: string; endpoint?: string; model: string } | undefined;
+    if (active && active.apiKey) {
+      const tc: TextProviderConfig = {
+        id: active.id as TextProviderId,
+        label: active.label || active.id,
+        apiKey: active.apiKey,
+        model: active.model || 'gemini-2.5-flash',
+        endpoint: active.endpoint,
+      };
+      this.saveTextProvider(tc);
+      return tc;
+    }
+    return null;
+  }
+
+  /**
+   * Try to auto-configure the text provider from on-disk key files
+   * (in dev / test workflows only — never shipped).
+   */
+  configureTextFromFiles(): void {
+    if (typeof window !== 'undefined' && (window as { DEV?: boolean }).DEV) return;
+    // stub — caller (test-runner or dev setup script) should invoke the
+    // explicit configure-files helper instead.
+  }
+
+  // ── Image provider ────────────────────────────────────────────────
+
+  saveImageProvider(config: ImageProviderConfig): void {
+    localStorage.setItem('botstory_image_provider', JSON.stringify(config));
+  }
+
+  getImageProvider(): ImageProviderConfig | null {
+    const raw = localStorage.getItem('botstory_image_provider');
+    return this.safeParse<ImageProviderConfig | null>(raw, null);
+  }
+
+  /** Simple migration: if old botstory_providers holds a gemini config with imageModel, set gemini-imagen as image provider. */
+  migrateImageProvider(): ImageProviderConfig | null {
+    const oldRaw = localStorage.getItem('botstory_providers');
+    if (!oldRaw) return null;
+    const old = this.safeParse<Record<string, { id: string; label: string; apiKey: string; endpoint?: string; model: string; imageModel?: string }>>(oldRaw, {});
+    const gemini = old.gemini || old.nvidia || old.openrouter || Object.values(old)[0];
+    if (gemini && gemini.imageModel && gemini.apiKey) {
+      const ic: ImageProviderConfig = {
+        id: 'gemini-imagen',
+        label: 'Gemini Imagen',
+        apiKey: gemini.apiKey,
+        model: gemini.imageModel,
+      };
+      this.saveImageProvider(ic);
+      return ic;
+    }
+    return null;
+  }
+
+  /** Try to pre-fill CF image from the two on-disk files. Caller: test/dev setup script. */
+  configureImageFromFiles(apiKey: string, accountId: string): ImageProviderConfig {
+    const ic: ImageProviderConfig = {
+      id: 'cloudflare',
+      label: 'Cloudflare Workers AI',
+      apiKey,
+      accountId,
+      model: '@cf/black-forest-labs/flux-1-schnell',
+    };
+    this.saveImageProvider(ic);
+    return ic;
+  }
+
+  // ── Worker config ─────────────────────────────────────────────────
+
+  saveWorkerConfig(config: WorkerConfig): void {
+    localStorage.setItem('botstory_worker', JSON.stringify(config));
+  }
+
+  getWorkerConfig(): WorkerConfig | null {
+    const raw = localStorage.getItem('botstory_worker');
+    return this.safeParse<WorkerConfig | null>(raw, null);
+  }
+
+  // ── Backward compat (keep old APIs alive) ──────────────────────────
+
+  /** @deprecated use saveTextProvider / saveImageProvider */
+  saveProvider(config: { id: string; label: string; apiKey: string; endpoint?: string; model: string; imageModel?: string }): void {
     const raw = localStorage.getItem('botstory_providers');
-    const all: Record<string, ProviderConfig> = raw ? JSON.parse(raw) : {};
+    const all = this.safeParse<Record<string, typeof config>>(raw, {});
     all[config.id] = config;
     localStorage.setItem('botstory_providers', JSON.stringify(all));
   }
 
-  getProvider(id: ProviderId): ProviderConfig | null {
+  /** @deprecated use getTextProvider / getImageProvider */
+  getProvider(id: ProviderId): { id: string; label: string; apiKey: string; endpoint?: string; model: string; imageModel?: string } | null {
     const raw = localStorage.getItem('botstory_providers');
-    if (!raw) return null;
-    const all = JSON.parse(raw) as Record<string, ProviderConfig>;
+    const all = this.safeParse<Record<string, { id: string; label: string; apiKey: string; endpoint?: string; model: string; imageModel?: string }>>(raw, {});
     return all[id] || null;
   }
 
-  getAllProviders(): ProviderConfig[] {
+  /** @deprecated use getImageProvider for image-model list */
+  getAllProviders(): { id: string; label: string; apiKey: string; endpoint?: string; model: string; imageModel?: string }[] {
     const raw = localStorage.getItem('botstory_providers');
-    if (!raw) return [];
-    return Object.values(JSON.parse(raw)) as ProviderConfig[];
+    const all = this.safeParse<Record<string, { id: string; label: string; apiKey: string; endpoint?: string; model: string; imageModel?: string }>>(raw, {});
+    return Object.values(all);
   }
 
   getActiveProviderId(): ProviderId {
@@ -110,16 +232,14 @@ export class StorageService {
 
   clearAllProviders(): void {
     localStorage.removeItem('botstory_providers');
+    localStorage.removeItem('botstory_text_provider');
+    localStorage.removeItem('botstory_image_provider');
     localStorage.removeItem('botstory_active_provider');
+    localStorage.removeItem('botstory_worker');
   }
 
   saveProviderKey(id: ProviderId, key: string): void {
-    const config = this.getProvider(id) || {
-      id,
-      label: id,
-      apiKey: '',
-      model: '',
-    };
+    const config = this.getProvider(id) || { id, label: id, apiKey: '', model: '' };
     config.apiKey = key;
     this.saveProvider(config);
   }
