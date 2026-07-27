@@ -2,8 +2,17 @@ import { StorageService } from './storage';
 import { PromptComposer } from './composer';
 import { StateManager } from './stateManager';
 import { TriggerProcessor, TriggerResult } from './triggerProcessor';
-import { LLMClient } from './llmClient';
-import { StoryInstance, UserAction, TurnResult, ProviderConfig } from './types';
+import { VictoryDefeatProcessor, VictoryDefeatResult } from './victoryDefeatProcessor';
+import { Summarizer } from './summarizer';
+import { TextClient } from './textClient';
+import { ImageClient } from './imageClient';
+import {
+  StoryInstance,
+  UserAction,
+  TurnResult,
+  TextProviderConfig,
+  ImageProviderConfig,
+} from './types';
 
 export class TurnOrchestrator {
   constructor(
@@ -11,15 +20,19 @@ export class TurnOrchestrator {
     private composer: PromptComposer,
     private stateManager: StateManager,
     private triggerProcessor: TriggerProcessor,
-    private llmClient: LLMClient
+    private victoryDefeatProcessor: VictoryDefeatProcessor,
+    private summarizer: Summarizer,
+    private textClient: TextClient,
+    private imageClient: ImageClient
   ) {}
 
   async executeTurn(
     worldId: string,
     instanceId: string,
     action: UserAction,
-    provider: ProviderConfig,
-    opts: { generateImage?: boolean; signal?: AbortSignal } = {}
+    textProvider: TextProviderConfig,
+    imageProvider: ImageProviderConfig,
+    opts: { signal?: AbortSignal } = {}
   ): Promise<TurnResult> {
     const world = await this.storage.getWorld(worldId);
     const instance = await this.storage.getInstance(instanceId);
@@ -30,25 +43,33 @@ export class TurnOrchestrator {
       throw new Error('This story has already ended. Please start a new instance.');
     }
 
-    // 1. Snapshot for regenerate (captured for potential use)
-    this.stateManager.snapshot(instance);
+    // 1. Snapshot before the turn for regenerate-restore (see §A3)
+    instance.lastSnapshot = this.stateManager.snapshot(instance);
 
     // 2. Build prompts
     const systemPrompt = this.composer.buildSystemPrompt(world);
     const userPrompt = this.composer.buildUserPrompt(world, instance, action);
 
-    // 3. Call LLM
-    const outcome = await this.llmClient.call(provider, systemPrompt, userPrompt, { signal: opts.signal });
+    // 3. Text generation (story)
+    const outcome = await this.textClient.call(
+      textProvider,
+      systemPrompt,
+      userPrompt,
+      { signal: opts.signal }
+    );
 
-    // 4. Apply state
+    // 4. Apply AI state updates
     let updated = this.stateManager.applyStateUpdates(instance, outcome, world);
 
     // 5. Process triggers
     const trig: TriggerResult = this.triggerProcessor.processTriggers(world, updated, outcome);
     updated = trig.updatedInstance;
 
-    // 6. Build image prompt and (optionally) generate
-    let imageDataUrl: string | undefined;
+    // 5b. Evaluate victory/defeat conditions (P1 fix)
+    const vd: VictoryDefeatResult = this.victoryDefeatProcessor.process(world, updated, outcome);
+    updated = vd.updatedInstance;
+
+    // 6. Build visual prompt
     let visualPrompt = outcome.visualPrompt;
     if (!visualPrompt) {
       visualPrompt = this.composer.buildImagePrompt(
@@ -60,12 +81,18 @@ export class TurnOrchestrator {
     }
     outcome.visualPrompt = visualPrompt;
 
-    if (opts.generateImage) {
-      const img = await this.llmClient.generateImage(provider, visualPrompt);
+    // 7. Generate image (if provider is not 'none' and has a key)
+    let imageDataUrl: string | undefined;
+    if (imageProvider.id !== 'none' && imageProvider.apiKey) {
+      const img = await this.imageClient.generate(
+        imageProvider,
+        visualPrompt,
+        { signal: opts.signal }
+      );
       if (img) imageDataUrl = img;
     }
 
-    // 7. Append to history
+    // 8. Append to history
     const now = Date.now();
     updated.history = [
       ...updated.history,
@@ -83,6 +110,7 @@ export class TurnOrchestrator {
         suggestedActions: outcome.suggestedActions,
         visualPrompt,
         imageDataUrl,
+        whereWhen: outcome.whereWhen,
       },
     ];
     updated.turnNumber += 1;
@@ -90,9 +118,26 @@ export class TurnOrchestrator {
       updated.ended = true;
       updated.endMessage = trig.endMessage;
     }
+    if (vd.ended) {
+      updated.ended = true;
+      updated.endMessage = vd.endMessage;
+    }
     updated.lastOutcome = outcome;
 
-    // 8. Persist
+    // Best-effort long-term summariser — runs every N turns from turn 8.
+    // Failures (no key, network error) leave the instance untouched; we log and move on.
+    if (this.summarizer.shouldSummarise(world, updated)) {
+      try {
+        updated = await this.summarizer.run(world, updated, textProvider, {
+          signal: opts.signal,
+          client: this.textClient,
+        });
+      } catch {
+        // summarisation is non-fatal — pretend it didn't happen.
+      }
+    }
+
+    // Persist (keep lastSnapshot so the next regenerate can restore to this turn's pre-state)
     await this.storage.saveInstance(updated);
 
     return {
@@ -106,34 +151,69 @@ export class TurnOrchestrator {
   async regenerateLastTurn(
     worldId: string,
     instanceId: string,
-    provider: ProviderConfig,
+    textProvider: TextProviderConfig,
+    imageProvider: ImageProviderConfig,
     newAction?: UserAction,
-    opts: { generateImage?: boolean; signal?: AbortSignal } = {}
+    opts: { signal?: AbortSignal } = {}
   ): Promise<TurnResult> {
     const instance = await this.storage.getInstance(instanceId);
     if (!instance) throw new Error('Instance not found.');
     if (instance.history.length < 2) throw new Error('No turn to regenerate.');
 
-    // Find the last user action
+    // Use the stored snapshot if available; otherwise fall back to the old manual-slice (zero state).
+    if (instance.lastSnapshot) {
+      await this.storage.saveInstance(
+        this.stateManager.restore(instance, instance.lastSnapshot)
+      );
+    } else {
+      const trimmed = instance.history.slice(0, instance.history.length - 2);
+      const fallback: StoryInstance = {
+        ...instance,
+        history: trimmed,
+        turnNumber: Math.max(0, instance.turnNumber - 1),
+      };
+      await this.storage.saveInstance(fallback);
+    }
+
     const lastUser = [...instance.history].reverse().find((h) => h.role === 'user');
-    if (!lastUser) throw new Error('No previous user action found.');
-
-    // Drop the last assistant + user message
-    const trimmed = instance.history.slice(0, instance.history.length - 2);
-    const restored: StoryInstance = {
-      ...instance,
-      history: trimmed,
-      turnNumber: Math.max(0, instance.turnNumber - 1),
-    };
-
-    // Re-apply final state from history if any
-    await this.storage.saveInstance(restored);
-
     const action: UserAction = newAction || {
-      text: lastUser.content,
-      imageInstructions: lastUser.imageInstructions,
+      text: lastUser?.content ?? '',
+      imageInstructions: lastUser?.imageInstructions,
     };
-    return this.executeTurn(worldId, instanceId, action, provider, opts);
+    return this.executeTurn(worldId, instanceId, action, textProvider, imageProvider, opts);
+  }
+
+  /**
+   * Re-run image generation for an existing assistant history entry, in place.
+   * Used by the in-UI "🔄 Swap image" affordance — no LLM text call, no state change.
+   * Returns the updated instance with the new image URL on the targeted message.
+   */
+  async swapImage(
+    instanceId: string,
+    imageProvider: ImageProviderConfig,
+    historyIndex: number,
+    opts: { signal?: AbortSignal } = {}
+  ): Promise<StoryInstance> {
+    if (imageProvider.id === 'none' || !imageProvider.apiKey) {
+      throw new Error('No image AI configured. Open Settings to add one.');
+    }
+    const instance = await this.storage.getInstance(instanceId);
+    if (!instance) throw new Error('Instance not found.');
+    const target = instance.history[historyIndex];
+    if (!target || target.role !== 'assistant' || !target.visualPrompt) {
+      throw new Error('No image to swap on this turn.');
+    }
+    const img = await this.imageClient.generate(imageProvider, target.visualPrompt, {
+      signal: opts.signal,
+    });
+    const updated: StoryInstance = {
+      ...instance,
+      history: instance.history.map((m, i) =>
+        i === historyIndex ? { ...m, imageDataUrl: img ?? undefined } : m
+      ),
+    };
+    await this.storage.saveInstance(updated);
+    return updated;
   }
 }
 
@@ -142,5 +222,8 @@ export const orchestrator = new TurnOrchestrator(
   new PromptComposer(),
   new StateManager(),
   new TriggerProcessor(),
-  new LLMClient()
+  new VictoryDefeatProcessor(),
+  new Summarizer(),
+  new TextClient(),
+  new ImageClient()
 );
