@@ -1,0 +1,8 @@
+name = "botstory-proxy"
+main = "cloudflare-worker.js"
+compatibility_date = "2024-09-01"
+
+# Optional: set SHARED_TOKEN here to lock down the Worker.
+# Leave commented out for an open, per-IP-rate-limited proxy.
+# [vars]
+# SHARED_TOKEN = "your-shared-secret"
