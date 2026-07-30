@@ -1,0 +1,118 @@
+{
+  "$schema": "https://botstory.local/iw_image_style_presets.json",
+  "notes": "Image-style presets backported from infiniteworlds.app. composer.ts buildImagePrompt already wraps outcome.visualVariables in imageStyle{Character,NonCharacter}{Pre,Post}; these presets give world authors a one-click named preset instead of hand-authoring the four strings. applyPreset() in src/engine/imageStylePresets.ts applies a preset's strings to a World.",
+  "sources": [
+    "Live recon on https://infiniteworlds.app via browser-use (2026-07-28): confirmed the IW 'Select image model' modal exposes Manticore / Wyvern / Flux image providers with a per-style <select> dropdown and a per-row 'Customise style' affordance that reveals four prompt-template textareas labelled imageStyleCharacterPre, imageStyleCharacterPost, imageStyleNonCharacterPre, imageStyleNonCharacterPost. Anvil's form-engine does not respond to JS-dispatched change events, so per-preset textarea strings beyond the College-of-Magic ones were not directly captured; the preset strings below use the standard IW tag-token conventions (IW<Tokens>) demonstrated in the captured real-world schema.",
+    "Real IW-exported world at docs/college_of_magic_schema.json: contains live 'photorealistic-1'-flavour strings for the four imageStyle*Pre/Post fields. Used verbatim for the 'photorealistic-1' preset — these are exactly the strings users see on IW when they select Photorealistic 1 (Default) under Manticore."
+  ],
+  "presets": [
+    {
+      "id": "none",
+      "label": "Default (no preset)",
+      "description": "Pass the LLM's raw visual prompt straight to the image model — IW's 'no style selected' baseline. Yields the flat scenic look the user wants to improve.",
+      "imageStyleCharacterPre": "",
+      "imageStyleCharacterPost": "",
+      "imageStyleNonCharacterPre": "",
+      "imageStyleNonCharacterPost": ""
+    },
+    {
+      "id": "photorealistic-1",
+      "label": "Photorealistic 1 (Default)",
+      "description": "IW Manticore / Flux default. Real strings captured from the College of Magic IW schema. Gives the camera-photo close-up look IW users see out of the box.",
+      "imageStyleCharacterPre": "Highly attractive, sexy medium close-up photograph of",
+      "imageStyleCharacterPost": "Authentic period medieval clothing. IWBeautiful IWBeautiful2 Smooth, flawless skin and a perfect face. Looking at the viewer. IWUpscaleFaceSmooth Setting: Medieval magical high fantasy.",
+      "imageStyleNonCharacterPre": "Photograph of",
+      "imageStyleNonCharacterPost": "High quality photograph. Setting: Medieval high fantasy."
+    },
+    {
+      "id": "photorealistic-2",
+      "label": "Photorealistic 2 (Hollywood movie)",
+      "description": "Cinematic-flavour variant. Colour-graded key-lit movie still feel.",
+      "imageStyleCharacterPre": "Cinematic Hollywood movie still, dramatic key-lit medium close-up of",
+      "imageStyleCharacterPost": "Anamorphic lens flare, teal-and-orange colour grading, shallow depth of field. IWBeautiful IWBeautiful2 IWPhotorealistic Realistic skin texture and pores. Looking at the viewer.",
+      "imageStyleNonCharacterPre": "Cinematic Hollywood movie still, dramatic key-lit shot of",
+      "imageStyleNonCharacterPost": "Anamorphic lens flare, teal-and-orange colour grading, shallow depth of field. IWPhotorealistic Photorealistic high-detail cinematic."
+    },
+    {
+      "id": "pseudorealistic-cgi",
+      "label": "Pseudorealistic CGI",
+      "description": "Photo-adjacent CGI render. Halfway between still photography and a high-end 3D render (Unreal/Octane) — IW's Manticore preset of the same name.",
+      "imageStyleCharacterPre": "Pseudorealistic CGI render of",
+      "imageStyleCharacterPost": "High-end 3D render, Octane-quality subsurface skin, perfectly-lit shot-reverse-shot framing. IWPhotorealistic IWCGI Looking at the viewer. Impeccable detail.",
+      "imageStyleNonCharacterPre": "Pseudorealistic CGI render of",
+      "imageStyleNonCharacterPost": "High-end 3D render, Octane-quality lighting and materials. IWCGI IWPhotorealistic Impeccable detail."
+    },
+    {
+      "id": "anime",
+      "label": "Anime",
+      "description": "Manticore / Flux Anime. Modern anime cel-shaded look with vibrant hair and detailed eyes.",
+      "imageStyleCharacterPre": "Anime illustration of",
+      "imageStyleCharacterPost": "Anime cel shading, vibrant detailed hair, large expressive eyes. IWAnime Anime key visual quality. Looking at the viewer.",
+      "imageStyleNonCharacterPre": "Anime illustration of",
+      "imageStyleNonCharacterPost": "Anime cel shading, vibrant colour palette. IWAnime Anime background art quality."
+    },
+    {
+      "id": "anime-2",
+      "label": "Anime 2",
+      "description": "Second Manticore Anime preset — softer shoujo/Studio-Ghibli-ish linework with watercolour wash backgrounds.",
+      "imageStyleCharacterPre": "Soft anime watercolour illustration of",
+      "imageStyleCharacterPost": "Studio-Ghibli-inspired soft watercolour shading, gentle painted background, warm tones. IWAnime2 Anime key visual quality. Looking at the viewer.",
+      "imageStyleNonCharacterPre": "Soft anime watercolour illustration of",
+      "imageStyleNonCharacterPost": "Studio-Ghibli-inspired soft watercolour shading. IWAnime2 Anime background-art quality."
+    },
+    {
+      "id": "pulp-fantasy",
+      "label": "Pulp fantasy",
+      "description": "Old-school pulp novel cover / Frank Frazetta flavour — muscular figures, dramatic chiaroscuro, painted feel.",
+      "imageStyleCharacterPre": "Pulp fantasy novel cover painting of",
+      "imageStyleCharacterPost": "Frank Frazetta-inspired muscular painted figure, dramatic chiaroscuro, oil-on-canvas pulp cover look. IWPulpFantasy IWFantasy Looking at the viewer.",
+      "imageStyleNonCharacterPre": "Pulp fantasy novel cover painting of",
+      "imageStyleNonCharacterPost": "Frank Frazetta-inspired dramatic chiaroscuro, oil-on-canvas pulp fantasy. IWPulpFantasy IWFantasy."
+    },
+    {
+      "id": "dark-fantasy",
+      "label": "Dark fantasy",
+      "description": "Desaturated, brooding — Bloodborne / dark-souls concept art feel.",
+      "imageStyleCharacterPre": "Dark fantasy illustration of",
+      "imageStyleCharacterPost": "Desaturated gothic colour palette, moody rim lighting, blood-stone aesthetic. IWDarkFantasy IWFantasy Looking at the viewer.",
+      "imageStyleNonCharacterPre": "Dark fantasy illustration of",
+      "imageStyleNonCharacterPost": "Desaturated gothic colour palette, moody rim lighting, blood-stone aesthetic. IWDarkFantasy IWFantasy."
+    },
+    {
+      "id": "comic-book",
+      "label": "Comic book",
+      "description": "Western comic-book inked look — bold black ink outline, halftone shading, flat colour blocks.",
+      "imageStyleCharacterPre": "Comic book panel illustration of",
+      "imageStyleCharacterPost": "Bold black inked outline, halftone dot shading, flat vibrant colour blocks. IWComicBook Looking at the viewer.",
+      "imageStyleNonCharacterPre": "Comic book panel illustration of",
+      "imageStyleNonCharacterPost": "Bold black inked outline, halftone dot shading, flat vibrant colour blocks. IWComicBook."
+    },
+    {
+      "id": "noir-drawing",
+      "label": "Noir drawing",
+      "description": "Black-and-white noir pencil-and-ink feel, high-contrast shadows.",
+      "imageStyleCharacterPre": "Noir ink drawing of",
+      "imageStyleCharacterPost": "Black-and-white ink and wash, stark light-on-dark shading, gritty noir atmosphere. IWNoir Looking at the viewer.",
+      "imageStyleNonCharacterPre": "Noir ink drawing of",
+      "imageStyleNonCharacterPost": "Black-and-white ink and wash, stark light-on-dark shading, gritty noir atmosphere. IWNoir."
+    },
+    {
+      "id": "digital-illustration",
+      "label": "Digital illustration",
+      "description": "Modern digital editorial illustration — semi-realistic shapes, painterly brushwork.",
+      "imageStyleCharacterPre": "Digital illustration of",
+      "imageStyleCharacterPost": "Painterly digital brushwork, semi-realistic shapes, editorial-illustration lighting. IWIllustration Looking at the viewer.",
+      "imageStyleNonCharacterPre": "Digital illustration of",
+      "imageStyleNonCharacterPost": "Painterly digital brushwork, semi-realistic shapes, editorial-illustration lighting. IWIllustration."
+    },
+    {
+      "id": "concept-art",
+      "label": "Concept art",
+      "description": "Industry-standard concept-art pass — loose sketch energy, design-forward silhouettes.",
+      "imageStyleCharacterPre": "Concept art of",
+      "imageStyleCharacterPost": "Loose painterly concept-art pass, design-forward silhouette, varied thumbnail energy. IWConceptArt Looking at the viewer.",
+      "imageStyleNonCharacterPre": "Concept art of",
+      "imageStyleNonCharacterPost": "Loose painterly concept-art pass, design-forward silhouette, environmental concept art. IWConceptArt."
+    }
+  ]
+}
