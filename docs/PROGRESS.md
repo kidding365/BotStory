@@ -1,8 +1,8 @@
 # BotStory — Comprehensive Implementation Progress
 
-**Updated:** 2026-07-27
-**Branch:** main (HEAD: 714abd5 + local changes)
-**Status:** Engine P1s + Audit P2-P4 done; all 7 playability gaps shipped; **§11 Live Full-Turn QA passed and §12 prompted-QA-found bug fixed**; 35/35 tests + lint + tsc green. The only outstanding work is the commit + PR (§13).
+**Updated:** 2026-07-30
+**Branch:** main (HEAD: `dd1f53d` — synced with `origin/main`)
+**Status:** All roadmap items shipped: engine P1s, audit P2-P4, all 7 playability gaps, §11 Live Full-Turn QA, §12 prompt-schema fix, §14 IW image-style presets, §13 commit + push. **53/53 tests + lint + tsc green. Working tree clean. Nothing in progress, nothing outstanding.**
 
 ---
 
@@ -246,7 +246,7 @@ All seven gaps from the gap analysis are implemented. Original plan table is kep
 | **Character picker** | If `world.possibleCharacters.length > 1`, render picker before play | S | — | ✅ `play/page.tsx` — gates `init()` when no `instanceId` and >1 character; new `CharacterPicker` component renders portrait/description/skill chips |
 | **Render `objective` + `whereWhen`** | Show `world.objective` once; `outcome.whereWhen` per turn | S | — | ✅ `play/page.tsx` renders the Objective banner above history when `history.length > 0`; `Message` renders `📍 {msg.whereWhen}` caption. `TurnMessage.whereWhen` added to `types.ts`; `orchestrator.executeTurn` persists `outcome.whereWhen` on each assistant message |
 | **"Swap image" button** | Re-run `imageClient.generate` with same `visualPrompt` | S | Image AI configured | ✅ New `orchestrator.swapImage(instanceId, imageProvider, historyIndex)` re-runs `imageClient.generate` on the stored `visualPrompt` and updates the targeted assistant message in place; `Message` shows a "🔄 Swap image" button under each assistant image when an image provider is configured |
-| **Panel world editor** | `/worlds/[id]/edit` with cards for instruction blocks / tracked items / triggers | M | P1 done | ✅ New route `app/src/app/worlds/[id]/edit/page.tsx` — collapsible `Card`-based editor for: Introducing the story (title/description/background/objective/instructions/authorStyle/firstInput), Instruction Blocks (full CRUD + isActive + keywords), Tracked Items (full CRUD + dataType/visibility/initialValue/description/updateInstructions), Triggers (full CRUD + condition editor + effect editor), Victory/Defeat (with JSON-DSL hint). Header has 💾 Save + ▶ Save & Play. `worlds/page.tsx` gains a "✎ Edit" link and a "⎘ Copy" (`handleMakeCopy` — clones via `crypto.randomUUID()`) per world |
+| **Panel world editor** | `/worlds/[id]/edit` with cards for instruction blocks / tracked items / triggers | M | P1 done | ✅ Route lives at `/worlds/edit?worldId=X` (query-param form — moved this session from the dynamic path because `output: "export"` rejects `/worlds/[id]/edit`). Collapsible `Card`-based editor for: Introducing the story (title/description/background/objective/instructions/authorStyle/firstInput), Instruction Blocks (full CRUD + isActive + keywords), Tracked Items (full CRUD + dataType/visibility/initialValue/description/updateInstructions), Triggers (full CRUD + condition editor + effect editor), Victory/Defeat (with JSON-DSL hint), **plus Visual style (image presets)** card — see §14 for that card. Header has 💾 Save + ▶ Save & Play. `worlds/page.tsx` gains a "✎ Edit" link and a "⎘ Copy" (`handleMakeCopy` — clones via `crypto.randomUUID()`) per world |
 | **In-game Menu** | Save/Load/Restart, model swap, Storyteller toggle | M | P1 done | ✅ New `GameMenu` drawer (≡ Menu button) with: **Save point** (clones the live instance to `inst_<ts>_save_<label>`, finds it under World Library → Saved playthroughs — currently a single-slot autosave pattern), **Model** (mid-game swap of `textProvider.model`, persists via `storage.saveTextProvider`), **Storyteller mode** (clean toggle that surfaces the existing narrative-override textarea), **Adventure → Restart** (confirms then routes to `/play?worldId=…` for a fresh instance) |
 | **Auto-summarizer** | Periodic Summary AI (every N turns) → `instance.summary` → prepended to prompt | M | Long-term | ✅ New `src/engine/summarizer.ts` + `Summarizer` class. `SUMMARY_DEFAULTS = { startTurn: 8, every: 6, windowLookback: 12, maxSummaryChars: 1500 }`. `shouldSummarise()` predicate + `run()` method (one extra LLM call via the same `TextClient`, best-effort — swallows errors). New `World.summarizationInstructions` field overrides the system prompt. New `StoryInstance.summary` + `StoryInstance.summaryTurn` fields. `composer.buildUserPrompt` prepends an `=== LONG-TERM SUMMARY ===` section before `=== RECENT HISTORY ===` (last 8 messages unchanged). `orchestrator.executeTurn` calls it after history append + turn increment, before persist. Heaven for 200+-turn playthroughs that previously hit the 8-message context wall |
 
@@ -341,9 +341,9 @@ We burned ~30+ minutes and several "Click Allow again" round-trips on first-time
 | `app/src/engine/imageStylePresets.ts` (new) | `IMAGE_STYLE_PRESETS` catalog (12 presets), `applyPreset(world, id)`, `matchPreset(world)`, `isCustomised(world)`, `getPreset(id)`. `applyPreset` returns a new World with the four `imageStyle*Pre/Post` strings set; `matchPreset` round-trips by exact-string match so imported IW worlds (e.g. College of Magic, which IW exports with verbatim Photorealistic-1 strings) light up automatically as "Photorealistic 1" in the dropdown. |
 | `app/src/engine/__tests__/imageStylePresets.test.ts` (new) | 14 unit tests: catalog presence, verbatim Photorealistic-1 regression against the real IW-exported College-of-Magic schema, default-id constant, `getPreset` fallback, `matchPreset` round-trip (real IW strings → photorealistic-1), `isCustomised` flags hand-tuned strings, `applyPreset` writes the four fields and tags `world.imageStyle`, `applyPreset("none")` clears, no-op on other World fields, unique ids + string shape per preset. |
 | `app/src/engine/__tests__/composer.test.ts` (extended) | +4 tests for `composer.buildImagePrompt` preset routing: character-flagged visual scene routes through Character Pre + subject + appearance + expression + Character Post; non-character routes through Non-character Pre + subject + setting + appearance + Non-character Post; the "none" preset reproduces the user-complained-about bare-scenic-prompt baseline exactly (`"A curious, beachcombing Wanderer, standing on a small, isolated beach at dawn"`); hand-customised fields are preserved over preset routing. |
-| `app/src/app/worlds/edit/page.tsx` (new) + `app/src/app/worlds/edit/EditClient.tsx` (moved from `[id]/edit/`) | "Visual style (image presets)" card added to the World editor: preset dropdown listing all 12 presets (and a "Custom" option that appears when the world's strings don't match any preset), short description below the dropdown, four monospace textareas (Character Pre/Post, Non-character Pre/Post) for hand-tuning, help text explaining the character-vs-non-character routing. Picking a preset calls `applyPreset(world, id)` and updates all four fields live.
+| `app/src/app/worlds/edit/page.tsx` (moved from `[id]/edit/page.tsx`) | Single-file client-component page (`"use client"`, 720 lines, blurs the server/client split — purely client because the editor reads `useSearchParams()`). "Visual style (image presets)" card added: preset dropdown listing all 12 presets (and a "Custom" option that appears when the world's strings don't match any preset), short description below the dropdown, four monospace textareas (Character Pre/Post, Non-character Pre/Post) for hand-tuning, help text explaining the character-vs-non-character routing. Picking a preset calls `applyPreset(world, id)` and updates all four fields live. **Note**: the §14 plan called for splitting this into `page.tsx` + `EditClient.tsx`, but the move kept it as one file — a future refactor can split a server `<Suspense>` wrapper for SEO if a next lint fires against the directory serving only a client component.
 
-  + as a fix-bug-along-the-way: the editor route also had a long-standing defect under `output: "export"` — it lived at the dynamic path `/worlds/[id]/edit/` and required `generateStaticParams` (Next 16 strictly enforces this for static-export builds). Moving it to query-param form `/worlds/edit?worldId=X` (matching `/play?worldId=X`'s existing pattern) makes the editor reachable in both dev and production-GitHub-Pages-deploy. Also fixed `EditClient.tsx:50` which used `useSearchParams().get('id')` against a path-segment route (always null → the editor previously never loaded any world).
+  + as a fix-bug-along-the-way: the editor route also had a long-standing defect under `output: "export"` — it lived at the dynamic path `/worlds/[id]/edit/` and required `generateStaticParams` (Next 16 strictly enforces this for static-export builds). Moving it to query-param form `/worlds/edit?worldId=X` (matching `/play?worldId=X`'s existing pattern) makes the editor reachable in both dev and production-GitHub-Pages-deploy. Also fixed `useSearchParams().get('id')` against a path-segment route (always returned null → the editor previously never loaded any world); it now reads `get('worldId')`.
 
 | `app/src/app/worlds/page.tsx` (modified) | The ✎ Edit link now points to `/worlds/edit?worldId=…` |
 | `docs/iw_image_style_presets.json` (new) | Canonical editable catalog: 12 presets with `{Character,NonCharacter}{Pre,Post}` strings + descriptions + provenance notes. The TS table in `imageStylePresets.ts` mirrors this JSON (the JSON is the source of truth; regen the TS table from it when adding presets). The `photorealistic-1` preset strings are taken verbatim from the real IW-exported `docs/college_of_magic_schema.json`; the other presets use the standard IW tag-token conventions (`IW<Tokens>`) demonstrated by that schema. |
@@ -383,21 +383,45 @@ The actual image-flavour enrichment on a fresh turn is verified at the test laye
 | TypeScript | `npx tsc --noEmit` | ✅ clean |
 
 #### Concerns to keep in mind for future work
-- **The original per-preset textarea strings for all styles other than `photorealistic-1` were not directly captured** during the live recon. Anvil's form-engine doesn't accept JS-injected `change` events (already documented in §14 in-progress section), and the time penalty to capture each one via real-keyboard-per-preset was too high for this session. The `photorealistic-1` strings are verbatim from the real IW-exported `docs/college_of_magic_schema.json`; the other presets use the IW tag-token conventions (`IW<Tokens>`) demonstrated by that schema and produce flavour-consistent Pre/Post strings that Cloudflare Flux accepts. **A future session can re-recon IW and overwrite the non-photorealistic strings with the exact IW-shipped ones** — pop each preset via real-keyboard ArrowDown/Enter; the JSON catalog is the editable source of truth and the TS table mirrors it (so an edit-and-tsc-sync cycle replaces the strings).
+- **The original per-preset textarea strings for all styles other than `photorealistic-1` were not directly captured** during the live recon. Anvil's form-engine (infiniteworlds.app) doesn't accept JS-injected `change` events — a `sel.value='x'; sel.dispatchEvent(new Event('change'))` cycle silently fails, the textareas stay empty. The reverse-engineering recipe is captured here (not in a separate wiki file — keep this §14 note as the canonical reference until someone moves it):
+  - Use **real keyboard events** via `browser-use`'s `press_key`: focus the `<select>`, `press_key("ArrowDown")` to highlight the target option (one press per option index), then `press_key("Enter")` to commit. The four "Customise style" textareas populate only after Anvil sees the real user-agent event.
+  - Alternative: `click_at_xy(x, y)` on the rendered `<option>` bounding box (has reportedly hit DPI desync on this Chromium build — see §11 friction note; verify with a screenshot before trusting the click).
+  - Save each preset's `{Character,NonCharacter}{Pre,Post}` strings into `docs/iw_image_style_presets.json` (the source of truth), then run `graphify update .` and re-sync the TS table in `app/src/engine/imageStylePresets.ts` to mirror the JSON.
+  - Time penalty was the only blocker for capturing all 12 presets this session; `photorealistic-1` is exact-from-real-IW-export (`docs/college_of_magic_schema.json`); the other 11 presets use IW tag-token conventions (`IW<Tokens>`) demonstrated by that schema and produce flavour-consistent Pre/Post strings that Cloudflare Flux accepts. **A future session can re-recon IW and overwrite the non-`photorealistic-1` strings with the exact IW-shipped ones** — pop each preset via real-keyboard ArrowDown/Enter.
 - The preset strings contain sketchulé-flavour specific tokens (`IWBeautiful`, `IWFantasy`, `IWPulpFantasy`, `IWDarkFantasy`, `IWAnime`, `IWComicBook`, `IWNoir`, `IWIllustration`, `IWConceptArt`, `IWCGI`, `IWPhotorealistic`, `IWUpscaleFaceSmooth`, etc.) — Flux's tokenizer is fine with them. If you change image provider to a model that doesn't know these tokens, you'll want to strip them or replace with provider-specific tokens.
+
+---
+
+## ✅ Done — §13 Commit + PR
+
+### 13. Commit + push to origin/main ✅ (2026-07-30)
+**Status:** Shipped. All in-session work — engine P1s (§7, §8), audit nits (§9), all 7 playability gaps (§10), live full-turn QA (§11), prompt-schema fix (§12), and the IW image-style presets backport (§14) — was committed per-feature and pushed to `origin/main`. The push triggers GitHub Pages deploy via the existing GH Actions workflow. `main` is the only long-lived branch; no PR was created.
+**Final state:** HEAD = `dd1f53d` = `origin/main`. Working tree clean. 0 commits ahead, 0 uncommitted changes.
+**Commits added this session (§14 + docs):**
+| SHA | Subject |
+|------|---------|
+| `dd1f53d` | `docs: §14 progress — ship IW image-style presets backport` |
+| `4295b26` | `ui(worlds/edit): move route to query-param form + Visual style preset card` |
+| `4e8444a` | `engine(tests): composer.buildImagePrompt preset-routing coverage` |
+| `96975e2` | `engine(imageStylePresets): IW-style preset catalog + applyPreset/matchPreset` |
+(Prior 17 commits from earlier sessions — `2d5e8ed` through `20a71cf` — were also part of this push; see `git log` for the full history.)
 
 ---
 
 ## 🔄 In Progress
 
-> _None — §14 IW image-style presets shipped 2026-07-30 (see Done section above). The "IW image-model catalog (Manticore / Wyvern / Flux) live-confirmed 2026-07-27" was previously in this section; the canonical per-preset strings now live in `docs/iw_image_style_presets.json` and `app/src/engine/imageStylePresets.ts`._
+> _None — all roadmap items shipped. Active session ended 2026-07-30 with nothing in flight. The IW image-model catalog recon (Manticore / Wyvern / Flux, 2026-07-27) that previously lived here has been folded into the §14 Done section and the canonical `docs/iw_image_style_presets.json`._
 
 ---
 
 ## ⏳ Planned (Not Started)
 
-### 13. Commit + PR 🔄
-The engine + UI work in earlier sessions (engine P1s, audit nits, all 7 playability gaps, QA-found prompt-schema fix §12) plus the §14 IW image-style presets work is the cumulative outstanding work. As of 2026-07-30 the local branch has 17+ pending commits ahead of origin (committed per-feature across earlier sessions under the previous §13 plan) PLUS new uncommitted changes for §14 — those §14 changes still need to be staged per feature and committed. After commits, push to `main` triggers GitHub Pages deploy. Feature-branch PR optional since `main` is the only long-lived branch, but recommended for review hygiene. See File Index below for the per-feature breakdown.
+> _Nothing outstanding from prior roadmap items. Possible future work surfaced during §14 verification (each is independent, none blocks the others):_
+
+1. **Re-recon IW to capture verbatim per-preset strings** for `photorealistic-2`, `pseudorealistic-cgi`, `anime`, `anime-2`, `pulp-fantasy`, `dark-fantasy`, `comic-book`, `noir-drawing`, `digital-illustration`, `concept-art`. Currently `photorealistic-1` is verbatim-from-exported-IW-schema; the other 11 use IW tag-token conventions (`IW<Tokens>`) plausibly but not exact-matched against the live modal. Recipe: open infiniteworlds.app, Menu → Image model, real-keyboard ArrowDown/Enter per preset (Anvil ignores `dispatchEvent(change)` — see §14's "Concerns to keep in mind" above for the full reverse-engineering recipe with `press_key` + `click_at_xy` fallbacks). The standard CDP-attach toolchain (`browser-use`) and the first-call "Allow remote debugging" popup gate are documented in `docs/wiki/Browser_Automation_Notes.md`.
+2. **Per-world preset field default** — `World.imageStyle` currently carries the chosen preset id once applied; new worlds default to `null` (no preset). Consider a "use `photorealistic-1` for new sample worlds" code change if the user wants richer default imagery out of the box.
+3. **Image provider token-strip** — if BotStory ever adds an image provider whose tokenizer doesn't know `IW<Tokens>` (only Flux has been exercised), wrap `imageClient.ts` with a token-strip pass keyed by provider id.
+4. **Split `app/src/app/worlds/edit/page.tsx`** into a server `<Suspense>` wrapper (`page.tsx`) + `EditClient.tsx`. Currently one 720-line client component — works, but Go-to-Definition + SEO would benefit from the split. Low priority.
 
 ---
 
@@ -431,7 +455,7 @@ The engine + UI work in earlier sessions (engine P1s, audit nits, all 7 playabil
 | `src/engine/__tests__/victoryDefeatProcessor.test.ts` | 7 V/D unit tests |
 | `src/engine/summarizer.ts` | Long-term memory summariser — `Summarizer` class + `SUMMARY_DEFAULTS`, called from orchestrator every N turns |
 | `src/engine/__tests__/summarizer.test.ts` | 7 summariser unit tests (predicate, fake-client run, prior-summary fold-in, instruction override, length cap) |
-| `src/app/worlds/[id]/edit/page.tsx` | Panel world editor — collapsible cards for Introducing the story / Instruction Blocks / Tracked Items / Triggers / Victory & Defeat, with full CRUD and a Save & Play action |
+| `app/src/app/worlds/edit/page.tsx` | Panel world editor — collapsible cards for Introducing the story / Instruction Blocks / Tracked Items / Triggers / Victory & Defeat, with full CRUD and a Save & Play action. **Moved this session** from `/worlds/[id]/edit/` to `/worlds/edit?worldId=X` (query-param form) because `output: "export"` rejects the dynamic path. Also gained the "Visual style (image presets)" card this session — see §14.
 | `docs/AUDIT.md` | Code/architecture audit |
 | `docs/PLAYABILITY_GAP.md` | Missing features vs infiniteworlds.app |
 | `docs/PROGRESS.md` | This file |
@@ -467,7 +491,9 @@ Still to do (this is the entire outstanding list):
 
 4. ~~**Live full-turn QA** — Done (§11, 2026-07-27): ran via the user's live Chromium session (browser-use/CDP), Gemini+Cloudflare+NVIDIA keys live; all 9 checklist steps verified; one prompt-schema defect found and fixed (§12).~~
 5. ~~**IW image-style presets** — Done (§14, 2026-07-30): live recon on IW + 12-preset catalog ("Photorealistic 1/2", "Pseudorealistic CGI", "Anime / Anime 2", "Pulp fantasy", "Dark fantasy", "Comic book", "Noir drawing", "Digital illustration", "Concept art", "Default (no preset)") shipped; preset picker added to the World editor; the editor's pre-existing `output: export` dynamic-route bug is fixed (now `/worlds/edit?worldId=X`); 53/53 tests + lint + tsc green; visual-prompt enrichment verified end-to-end at the test layer and the new picker UI verified in the live dev server.~~
-6. **Commit + PR** (push to main triggers GitHub Pages deploy) — the §14 work is uncommitted local changes (~7 files); commit per-feature and push. The earlier session's 17 commits are ALSO still local ahead of origin (need the same push). (See §13.)
+6. ~~**Commit + PR** — Done (§13, 2026-07-30): all in-session work per-feature-committed (17 prior + 4 new §14 = 21 commits) and pushed to `origin/main`. HEAD = `dd1f53d` = `origin/main`; working tree clean. Push triggers GitHub Pages deploy.~~
+
+Roadmap complete. New work is captured in ⏳ Planned above.
 
 ---
 
@@ -477,4 +503,4 @@ Still to do (this is the entire outstanding list):
 - **CF Account ID:** `a3e40b1b604efd1b0829859290ccb598`
 - **Keys (gitignored):** `gemini_key.txt`, `nvidia_key.txt`, `openrouter_key.txt`, `cloudflare_key.txt`
 - **Pre-commit hook:** Not installed; intentionally skipped (optional tooling)
-- **Graphify:** Last rebuilt 2026-07-22 via `graphify update .` — 507 nodes / 798 edges / 47 communities (AST-only, no API cost; up from 482/733/43 on 2026-07-18 after adding `summarizer.ts`, `victoryDefeatProcessor.ts`, and the panel editor route)
+- **Graphify:** Last rebuilt 2026-07-30 via `graphify update .` — **544 nodes / 856 edges / 45 communities** (AST-only, no API cost; was 507/798/47 on 2026-07-22; delta from this session's added `imageStylePresets.ts` + the worlds/edit route move). Raised after `graphify update .` per AGENTS.md "After modifying code, run `graphify update .`".
