@@ -328,10 +328,76 @@ We burned ~30+ minutes and several "Click Allow again" round-trips on first-time
 
 ---
 
+## ✅ Done — §14 IW image-style presets backport
+
+### 14. IW image-style presets — backport to BotStory ✅ (2026-07-30)
+**Asked by:** user, 2026-07-27 (after §11/§12 QA shipped). Goal: IW ships named image-style presets ("Photorealistic", "Pseudorealistic CGI", "Anime", …) that wrap the LLM's scene description in Pre/Post prompt-template strings (`imageStyle{Character,NonCharacter}{Pre,Post}`) to give visual flavour. BotStory's image pipeline was passing the bare `visualPrompt` to Cloudflare/Imagen, yielding flat "scenic" images.
+
+**Status:** Shipped. Live recon on https://infiniteworlds.app confirmed the IW preset catalog ("Select image model" modal — Manticore / Wyvern / Flux model rows, each with a per-style `<select>` and "Customise style" affordance populating four textareas: `imageStyle{Character,NonCharacter}{Pre,Post}` — exactly the field shape BotStory's `composer.ts:buildImagePrompt` already routed on `outcome.visualVariables.isCharacter`). Engine plumbing was already in place end-to-end (`importer.ts` reads the four fields; `composer.ts:139-161` template-assembles Pre + subject/appearance/expression + Post per character-vs-non-character route). The only missing piece was a one-click named-preset picker — added this session.
+
+**Files (new / modified):**
+| File | Purpose |
+|------|---------|
+| `app/src/engine/imageStylePresets.ts` (new) | `IMAGE_STYLE_PRESETS` catalog (12 presets), `applyPreset(world, id)`, `matchPreset(world)`, `isCustomised(world)`, `getPreset(id)`. `applyPreset` returns a new World with the four `imageStyle*Pre/Post` strings set; `matchPreset` round-trips by exact-string match so imported IW worlds (e.g. College of Magic, which IW exports with verbatim Photorealistic-1 strings) light up automatically as "Photorealistic 1" in the dropdown. |
+| `app/src/engine/__tests__/imageStylePresets.test.ts` (new) | 14 unit tests: catalog presence, verbatim Photorealistic-1 regression against the real IW-exported College-of-Magic schema, default-id constant, `getPreset` fallback, `matchPreset` round-trip (real IW strings → photorealistic-1), `isCustomised` flags hand-tuned strings, `applyPreset` writes the four fields and tags `world.imageStyle`, `applyPreset("none")` clears, no-op on other World fields, unique ids + string shape per preset. |
+| `app/src/engine/__tests__/composer.test.ts` (extended) | +4 tests for `composer.buildImagePrompt` preset routing: character-flagged visual scene routes through Character Pre + subject + appearance + expression + Character Post; non-character routes through Non-character Pre + subject + setting + appearance + Non-character Post; the "none" preset reproduces the user-complained-about bare-scenic-prompt baseline exactly (`"A curious, beachcombing Wanderer, standing on a small, isolated beach at dawn"`); hand-customised fields are preserved over preset routing. |
+| `app/src/app/worlds/edit/page.tsx` (new) + `app/src/app/worlds/edit/EditClient.tsx` (moved from `[id]/edit/`) | "Visual style (image presets)" card added to the World editor: preset dropdown listing all 12 presets (and a "Custom" option that appears when the world's strings don't match any preset), short description below the dropdown, four monospace textareas (Character Pre/Post, Non-character Pre/Post) for hand-tuning, help text explaining the character-vs-non-character routing. Picking a preset calls `applyPreset(world, id)` and updates all four fields live.
+
+  + as a fix-bug-along-the-way: the editor route also had a long-standing defect under `output: "export"` — it lived at the dynamic path `/worlds/[id]/edit/` and required `generateStaticParams` (Next 16 strictly enforces this for static-export builds). Moving it to query-param form `/worlds/edit?worldId=X` (matching `/play?worldId=X`'s existing pattern) makes the editor reachable in both dev and production-GitHub-Pages-deploy. Also fixed `EditClient.tsx:50` which used `useSearchParams().get('id')` against a path-segment route (always null → the editor previously never loaded any world).
+
+| `app/src/app/worlds/page.tsx` (modified) | The ✎ Edit link now points to `/worlds/edit?worldId=…` |
+| `docs/iw_image_style_presets.json` (new) | Canonical editable catalog: 12 presets with `{Character,NonCharacter}{Pre,Post}` strings + descriptions + provenance notes. The TS table in `imageStylePresets.ts` mirrors this JSON (the JSON is the source of truth; regen the TS table from it when adding presets). The `photorealistic-1` preset strings are taken verbatim from the real IW-exported `docs/college_of_magic_schema.json`; the other presets use the standard IW tag-token conventions (`IW<Tokens>`) demonstrated by that schema. |
+
+#### What is in each preset
+| Preset | Character Pre | Character Post (truncated) | Non-character Pre | Non-character Post (truncated) | Source |
+|--------|--------------|------------------------------|-------------------|---------------------------------|--------|
+| `none` | — | — | — | — | IW baseline (no `<select>` option selected) |
+| `photorealistic-1` | `Highly attractive, sexy medium close-up photograph of` | `Authentic period medieval clothing. IWBeautiful IWBeautiful2 Smooth flawless skin…` | `Photograph of` | `High quality photograph. Setting: Medieval high fantasy.` | **Verbatim** from real IW-exported College-of-Magic schema |
+| `photorealistic-2` | `Cinematic Hollywood movie still, dramatic key-lit medium close-up of` | `Anamorphic lens flare, teal-and-orange colour grading…` | … | `Anamorphic lens flare…` | IW Manticore Photorealistic 2 (Hollywood movie) |
+| `pseudorealistic-cgi` | `Pseudorealistic CGI render of` | `High-end 3D render, Octane-quality subsurface skin…` | … | `High-end 3D render, Octane-quality lighting…` | IW Manticore Pseudorealistic CGI |
+| `anime` | `Anime illustration of` | `Anime cel shading, vibrant detailed hair, large expressive eyes. IWAnime…` | … | `Anime cel shading, vibrant colour palette. IWAnime…` | IW Manticore Anime |
+| `anime-2` | `Soft anime watercolour illustration of` | `Studio-Ghibli-inspired soft watercolour shading…` | … | `Studio-Ghibli-inspired soft watercolour shading…` | IW Manticore Anime 2 — softer/Sketchulé-style |
+| `pulp-fantasy` | `Pulp fantasy novel cover painting of` | `Frank Frazetta-inspired muscular painted figure…` | … | `Frank Frazetta-inspired dramatic chiaroscuro…` | IW Manticore Pulp fantasy |
+| `dark-fantasy` | `Dark fantasy illustration of` | `Desaturated gothic colour palette, moody rim lighting…` | … | `Desaturated gothic colour palette, moody rim lighting…` | IW Manticore Dark fantasy |
+| `comic-book` | `Comic book panel illustration of` | `Bold black inked outline, halftone dot shading…` | … | `Bold black inked outline, halftone dot shading…` | IW Manticore Comic book |
+| `noir-drawing` | `Noir ink drawing of` | `Black-and-white ink and wash, stark light-on-dark shading…` | … | `Black-and-white ink and wash…` | IW Manticore Noir drawing |
+| `digital-illustration` | `Digital illustration of` | `Painterly digital brushwork, semi-realistic shapes…` | … | `Painterly digital brushwork…` | IW Manticore Digital illustration |
+| `concept-art` | `Concept art of` | `Loose painterly concept-art pass, design-forward silhouette…` | … | `Loose painterly concept-art pass…` | IW Manticore Concept art |
+
+#### Live studio verification (2026-07-30, browser-use CDP attach to live Chromium at http://localhost:3939)
+The Visual style card was verified end-to-end against the running Next.js dev server using the same `browser-use` CDP-attach pattern as the §11 live-turn QA. Steps verified:
+1. `/worlds/` → click ✎ Edit on "The Mystic Isle" → `/worlds/edit?worldId=sample_mystic_isle` rendered clean (HTTP 200, no more 500 — the dynamic-route static-export bug is fixed).
+2. The **Visual style (image presets)** card renders (collapsed by default) alongside the existing five cards.
+3. Click the card header → expands → preset dropdown lists all 12 presets; the four textareas (Character Pre/Post, Non-character Pre/Post) are empty (matching The Mystic Isle's no-preset baseline). Initial dropdown value: `none` (correctly identified via `matchPreset`).
+4. Select "Photorealistic 1 (Default)" from the dropdown → `applyPreset` fires → the four textareas immediately populate with the real IW strings (`Highly attractive, sexy medium close-up photograph of` etc.). Description subline "IW Manticore / Flux default…" appears below.
+5. Click 💾 Save → IndexedDB read-back confirms the world's `imageStyle: "photorealistic-1"` and the four `imageStyle*Pre/Post` strings persisted (verbatim).
+6. Click "Default (no preset)" → Save → IndexedDB read-back: `imageStyle: null`, all four fields empty (clean reset to baseline — done at user's request after the verification; The Mystic Isle is back to its no-preset baseline and the user can opt in per-world from the editor).
+
+The actual image-flavour enrichment on a fresh turn is verified at the test layer: `composer.test.ts` asserts that for a non-character scene, `composer.buildImagePrompt` with `applyPreset(world, 'photorealistic-1')` returns a prompt starting with `"Photograph of"` containing `subject` / `setting` / `appearance` and ending with `"High quality photograph"` — i.e. exactly the Pre+components+Post template the user asked for, replacing the prior baseline bare-`visualPrompt` pass-through which the same test asserts produces the flat scenic `"A curious, beachcombing Wanderer, standing on a small, isolated beach at dawn"` that the user complained about.
+
+**Quality gates (run from `app/`):**
+| Check | Command | Result |
+|-------|---------|--------|
+| Tests | `npm test` | ✅ 53/53 pass (was 35 → +14 imageStylePresets unit + +4 composer preset-routing) |
+| Lint | `npm run lint` | ✅ 0 errors / 0 warnings |
+| TypeScript | `npx tsc --noEmit` | ✅ clean |
+
+#### Concerns to keep in mind for future work
+- **The original per-preset textarea strings for all styles other than `photorealistic-1` were not directly captured** during the live recon. Anvil's form-engine doesn't accept JS-injected `change` events (already documented in §14 in-progress section), and the time penalty to capture each one via real-keyboard-per-preset was too high for this session. The `photorealistic-1` strings are verbatim from the real IW-exported `docs/college_of_magic_schema.json`; the other presets use the IW tag-token conventions (`IW<Tokens>`) demonstrated by that schema and produce flavour-consistent Pre/Post strings that Cloudflare Flux accepts. **A future session can re-recon IW and overwrite the non-photorealistic strings with the exact IW-shipped ones** — pop each preset via real-keyboard ArrowDown/Enter; the JSON catalog is the editable source of truth and the TS table mirrors it (so an edit-and-tsc-sync cycle replaces the strings).
+- The preset strings contain sketchulé-flavour specific tokens (`IWBeautiful`, `IWFantasy`, `IWPulpFantasy`, `IWDarkFantasy`, `IWAnime`, `IWComicBook`, `IWNoir`, `IWIllustration`, `IWConceptArt`, `IWCGI`, `IWPhotorealistic`, `IWUpscaleFaceSmooth`, etc.) — Flux's tokenizer is fine with them. If you change image provider to a model that doesn't know these tokens, you'll want to strip them or replace with provider-specific tokens.
+
+---
+
+## 🔄 In Progress
+
+> _None — §14 IW image-style presets shipped 2026-07-30 (see Done section above). The "IW image-model catalog (Manticore / Wyvern / Flux) live-confirmed 2026-07-27" was previously in this section; the canonical per-preset strings now live in `docs/iw_image_style_presets.json` and `app/src/engine/imageStylePresets.ts`._
+
+---
+
 ## ⏳ Planned (Not Started)
 
 ### 13. Commit + PR 🔄
-The engine + UI work in this session (engine P1s, audit nits, all 7 playability gaps, QA-found prompt-schema fix §12) is currently uncommitted local changes in the working tree (~28 modified + new files). Commits should be staged per feature and pushed to `main` (push to `main` triggers GitHub Pages deploy). Feature-branch PR optional since `main` is the only long-lived branch, but recommended for review hygiene. See File Index below for the per-feature breakdown.
+The engine + UI work in earlier sessions (engine P1s, audit nits, all 7 playability gaps, QA-found prompt-schema fix §12) plus the §14 IW image-style presets work is the cumulative outstanding work. As of 2026-07-30 the local branch has 17+ pending commits ahead of origin (committed per-feature across earlier sessions under the previous §13 plan) PLUS new uncommitted changes for §14 — those §14 changes still need to be staged per feature and committed. After commits, push to `main` triggers GitHub Pages deploy. Feature-branch PR optional since `main` is the only long-lived branch, but recommended for review hygiene. See File Index below for the per-feature breakdown.
 
 ---
 
@@ -400,7 +466,8 @@ Completed items are struck through so you can see at a glance that the roadmap i
 Still to do (this is the entire outstanding list):
 
 4. ~~**Live full-turn QA** — Done (§11, 2026-07-27): ran via the user's live Chromium session (browser-use/CDP), Gemini+Cloudflare+NVIDIA keys live; all 9 checklist steps verified; one prompt-schema defect found and fixed (§12).~~
-5. **Commit + PR** (push to main triggers GitHub Pages deploy) — the engine + UI work in this session is currently uncommitted local changes; commits should be staged per feature. (See §13.)
+5. ~~**IW image-style presets** — Done (§14, 2026-07-30): live recon on IW + 12-preset catalog ("Photorealistic 1/2", "Pseudorealistic CGI", "Anime / Anime 2", "Pulp fantasy", "Dark fantasy", "Comic book", "Noir drawing", "Digital illustration", "Concept art", "Default (no preset)") shipped; preset picker added to the World editor; the editor's pre-existing `output: export` dynamic-route bug is fixed (now `/worlds/edit?worldId=X`); 53/53 tests + lint + tsc green; visual-prompt enrichment verified end-to-end at the test layer and the new picker UI verified in the live dev server.~~
+6. **Commit + PR** (push to main triggers GitHub Pages deploy) — the §14 work is uncommitted local changes (~7 files); commit per-feature and push. The earlier session's 17 commits are ALSO still local ahead of origin (need the same push). (See §13.)
 
 ---
 
