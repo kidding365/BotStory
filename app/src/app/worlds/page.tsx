@@ -160,7 +160,7 @@ export default function WorldsPage() {
                         ▶ Play new
                       </Link>
                       <Link
-                        href={`/worlds/${encodeURIComponent(w.id)}/edit`}
+                        href={`/worlds/edit?worldId=${encodeURIComponent(w.id)}`}
                         className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-sm rounded"
                         title="Edit this world"
                       >

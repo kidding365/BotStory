@@ -13,6 +13,12 @@ import {
   TriggerEffect,
   EndCondition,
 } from '@/engine/types';
+import {
+  IMAGE_STYLE_PRESETS,
+  applyPreset,
+  matchPreset,
+  isCustomised,
+} from '@/engine/imageStylePresets';
 
 export default function EditWorldPageWrapper() {
   return (
@@ -41,7 +47,7 @@ function normalizeWorld(w: World): World {
 function EditWorldPage() {
   const sp = useSearchParams();
   const router = useRouter();
-  const id = sp.get('id');
+  const id = sp.get('worldId');
   const [world, setWorld] = useState<World | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [open, setOpen] = useState<Record<string, boolean>>({ general: true, victory: true });
@@ -187,6 +193,10 @@ function EditWorldPage() {
               className="w-full p-2 bg-zinc-900 border border-zinc-800 rounded text-sm outline-none"
             />
           </Field>
+        </Card>
+
+        <Card title="Visual style (image presets)" open={open.style} onToggle={() => toggle('style')}>
+          <ImageStyleCard world={world} setField={setField} setWorld={setWorld} />
         </Card>
 
         <Card title={`Instruction Blocks (${world.instructionBlocks.length})`} open={open.blocks} onToggle={() => toggle('blocks')}>
@@ -608,4 +618,103 @@ function EndConditionEditor({ label, cond, onChange }: { label: string; cond: En
 
 function Centered({ children }: { children: React.ReactNode }) {
   return <div className="min-h-screen flex items-center justify-center bg-zinc-950 text-zinc-100 p-6">{children}</div>;
+}
+
+function ImageStyleCard({
+  world,
+  setField,
+  setWorld,
+}: {
+  world: World;
+  setField: <K extends keyof World>(k: K, v: World[K]) => void;
+  setWorld: React.Dispatch<React.SetStateAction<World | null>>;
+}) {
+  // Determine which preset the world is currently using (via exact-string match).
+  const matched = matchPreset(world);
+  // Matched preset OR an explicit "Custom" entry the user can choose to keep hand-tuned strings.
+  const currentValue = isCustomised(world) ? '__custom__' : matched.id;
+
+  function onPresetChange(value: string) {
+    if (value === '__custom__') return; // not directly selectable from the dropdown
+    setWorld((w) => (w ? applyPreset(w, value) : w));
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-zinc-400 leading-relaxed">
+        A named image style wraps the AI&rsquo;s scene description (subject / appearance / setting) in
+        Pre / Post prompt-template strings, giving the image model a visual flavour like
+        &ldquo;Photorealistic&rdquo; or &ldquo;Anime&rdquo;. Backported from
+        <a className="text-blue-400 hover:text-blue-300 underline ml-1" href="https://infiniteworlds.app" target="_blank" rel="noopener noreferrer">infiniteworlds.app</a>.
+        The four text fields below are populated when you pick a preset; you can hand-tune them for finer control.
+      </p>
+
+      <Field label="Image style preset">
+        <select
+          value={currentValue}
+          onChange={(e) => onPresetChange(e.target.value)}
+          className="w-full p-2 bg-zinc-900 border border-zinc-800 rounded text-sm outline-none"
+        >
+          {IMAGE_STYLE_PRESETS.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.label}
+            </option>
+          ))}
+          {currentValue === '__custom__' && (
+            <option value="__custom__">Custom (hand-tuned &mdash; keep as-is)</option>
+          )}
+        </select>
+      </Field>
+
+      {matched.id !== 'none' && (
+        <p className="text-xs text-zinc-500 italic">{matched.description}</p>
+      )}
+      {currentValue === '__custom__' && (
+        <p className="text-xs text-amber-400 italic">
+          You have hand-tuned the image-style strings below. Edit the text fields to change them; pick a named preset to overwrite them.
+        </p>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+        <Field label="Character — Pre (prepended to subject/appearance/expression)">
+          <textarea
+            value={world.imageStyleCharacterPre || ''}
+            onChange={(e) => setField('imageStyleCharacterPre', e.target.value)}
+            rows={3}
+            className="w-full p-2 bg-zinc-900 border border-zinc-800 rounded text-xs font-mono outline-none"
+          />
+        </Field>
+        <Field label="Character — Post (appended after subject/appearance/expression)">
+          <textarea
+            value={world.imageStyleCharacterPost || ''}
+            onChange={(e) => setField('imageStyleCharacterPost', e.target.value)}
+            rows={3}
+            className="w-full p-2 bg-zinc-900 border border-zinc-800 rounded text-xs font-mono outline-none"
+          />
+        </Field>
+        <Field label="Non-character — Pre (prepended to subject/setting/appearance)">
+          <textarea
+            value={world.imageStyleNonCharacterPre || ''}
+            onChange={(e) => setField('imageStyleNonCharacterPre', e.target.value)}
+            rows={3}
+            className="w-full p-2 bg-zinc-900 border border-zinc-800 rounded text-xs font-mono outline-none"
+          />
+        </Field>
+        <Field label="Non-character — Post (appended after subject/setting/appearance)">
+          <textarea
+            value={world.imageStyleNonCharacterPost || ''}
+            onChange={(e) => setField('imageStyleNonCharacterPost', e.target.value)}
+            rows={3}
+            className="w-full p-2 bg-zinc-900 border border-zinc-800 rounded text-xs font-mono outline-none"
+          />
+        </Field>
+      </div>
+
+      <p className="text-xs text-zinc-600 pt-1">
+        Routing: if <code className="text-zinc-300">visualVariables.isCharacter</code> is true, the image prompt
+        assembles Character Pre + subject/appearance/expression + Character Post. Otherwise Non-character
+        Pre + subject/setting/appearance + Non-character Post. See <code className="text-zinc-300">composer.ts:buildImagePrompt</code>.
+      </p>
+    </div>
+  );
 }
