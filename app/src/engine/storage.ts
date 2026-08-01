@@ -152,7 +152,11 @@ export class StorageService {
 
   getImageProvider(): ImageProviderConfig | null {
     const raw = localStorage.getItem('botstory_image_provider');
-    return this.safeParse<ImageProviderConfig | null>(raw, null);
+    const parsed = this.safeParse<ImageProviderConfig | null>(raw, null);
+    if (!parsed) return null;
+    // Default aspectRatio for configs saved before the field existed. Stays null-safe for 'none' providers too.
+    if (!parsed.aspectRatio) parsed.aspectRatio = '3:4';
+    return parsed;
   }
 
   /** Simple migration: if old botstory_providers holds a gemini config with imageModel, set gemini-imagen as image provider. */

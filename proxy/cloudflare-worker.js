@@ -22,7 +22,7 @@
  *     Response: proxy text + CORS headers.
  *
  *   POST /cfimage            -> https://api.cloudflare.com/client/v4/accounts/<acct>/ai/run/<model>
- *     Browser sends: X-Api-Key: <user's Cloudflare API token>, X-Account-Id: <acct>, body: { model, prompt, steps?, seed? }
+ *     Browser sends: X-Api-Key: <user's Cloudflare API token>, X-Account-Id: <acct>, body: { model, prompt, steps?, seed?, width?, height? }
  *     (Account/model are here so we stay BYOK — the Worker doesn't know the account.)
  *     Response: { image: "data:image/png;base64,..." }  (the browser UI wants a ready data URI)
  *
@@ -175,9 +175,10 @@ async function forwardNvidia(request, subPath) {
  * Request body (JSON):
  *   { model: "@cf/black-forest-labs/flux-1-schnell",
  *     prompt: "...",
- *     steps?: 4,        // flux schnell: 1..8
+ *     steps?: 4,         // flux schnell: 1..8
  *     seed?:  Number,
- *     size?:  "512x512" // optional passthrough param where supported
+ *     width?:  Number,   // px; default per-model (1024 for flux). BotStory ships 900 (3:4) or 1600 (16:9)
+ *     height?: Number    // px; default per-model. BotStory ships 1200 (3:4) or 900 (16:9)
  *   }
  *
  * Response body (JSON): the Workers AI REST envelope, plus our prepackaged
@@ -218,6 +219,8 @@ async function forwardCfImage(request) {
     prompt: String(body.prompt || ''),
     ...(body.steps != null ? { steps: Number(body.steps) } : {}),
     ...(body.seed != null ? { seed: Number(body.seed) } : {}),
+    ...(body.width != null ? { width: Number(body.width) } : {}),
+    ...(body.height != null ? { height: Number(body.height) } : {}),
   };
   const upstreamRes = await fetch(upstreamUrl, {
     method: 'POST',

@@ -204,6 +204,39 @@ export interface TextProviderConfig {
 
 /** Image providers. 'none' is first-class so image gen can be disabled. */
 export type ImageProviderId = 'none' | 'gemini-imagen' | 'cloudflare' | 'custom';
+
+/**
+ * Aspect ratio presets for image generation. The user-requested defaults:
+ *   - '3:4'  →  900 x 1200 px (portrait, character-focused, the default)
+ *   - '16:9' → 1600 x  900 px (landscape, scenic / establishing shot)
+ *
+ * Resolved to {width, height} per provider in imageClient.ts:
+ *   - cloudflare     → body.width / body.height (Worker passes them through)
+ *   - gemini-imagen  → body.parameters.aspectRatio (= '3:4' or '16:9' literally;
+ *                      Imagen accepts the symbolic ratio string)
+ *   - custom         → body.width / body.height (caller's responsibility)
+ */
+export type ImageAspectRatioId = '3:4' | '16:9';
+
+export interface ImageAspectRatioPreset {
+  id: ImageAspectRatioId;
+  label: string;
+  width: number;
+  height: number;
+}
+
+export const IMAGE_ASPECT_RATIOS: readonly ImageAspectRatioPreset[] = [
+  { id: '3:4',  label: '3:4  (900×1200, portrait)',   width: 900,  height: 1200 },
+  { id: '16:9', label: '16:9 (1600×900, landscape)',   width: 1600, height: 900 },
+];
+
+export const DEFAULT_IMAGE_ASPECT_RATIO_ID: ImageAspectRatioId = '3:4';
+
+export function getAspectRatio(id: string | null | undefined): ImageAspectRatioPreset {
+  const found = IMAGE_ASPECT_RATIOS.find((r) => r.id === id);
+  return found ?? IMAGE_ASPECT_RATIOS[0];
+}
+
 export interface ImageProviderConfig {
   id: ImageProviderId;
   label: string;
@@ -214,6 +247,12 @@ export interface ImageProviderConfig {
   endpoint?: string;
   /** Optional style-preset string prepended to the prompt (free text). */
   style?: string;
+  /**
+   * Aspect ratio for generated images. '3:4' (portrait, the default) is best for
+   * character-driven scenes; '16:9' (landscape) for scenic establishing shots.
+   * Resolved per-provider in imageClient.ts. Falls back to '3:4' if unset.
+   */
+  aspectRatio?: ImageAspectRatioId;
 }
 
 /** The Worker proxy configuration — BYOK. The Worker URL is shared by nvidia text + cloudflare image. */

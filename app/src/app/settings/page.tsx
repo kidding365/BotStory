@@ -9,6 +9,9 @@ import {
   ImageProviderId,
   ImageProviderConfig,
   WorkerConfig,
+  IMAGE_ASPECT_RATIOS,
+  DEFAULT_IMAGE_ASPECT_RATIO_ID,
+  ImageAspectRatioId,
 } from '@/engine/types';
 
 const TEXT_PRESETS: Record<TextProviderId, { label: string; defaultModel: string; endpoint?: string; placeholder: string; viaWorker?: boolean }> = {
@@ -78,6 +81,7 @@ export default function SettingsPage() {
       apiKey: '',
       model: IMAGE_PRESETS.cloudflare.defaultModel,
       accountId: '',
+      aspectRatio: DEFAULT_IMAGE_ASPECT_RATIO_ID,
     }
   );
   const [imageSaved, setImageSaved] = useState(false);
@@ -115,7 +119,7 @@ export default function SettingsPage() {
     if (!confirm('Remove all API keys from this browser?')) return;
     storage.clearAllProviders();
     setTextConfig({ id: 'gemini', label: TEXT_PRESETS.gemini.label, apiKey: '', model: TEXT_PRESETS.gemini.defaultModel });
-    setImageConfig({ id: 'cloudflare', label: IMAGE_PRESETS.cloudflare.label, apiKey: '', model: IMAGE_PRESETS.cloudflare.defaultModel, accountId: '' });
+    setImageConfig({ id: 'cloudflare', label: IMAGE_PRESETS.cloudflare.label, apiKey: '', model: IMAGE_PRESETS.cloudflare.defaultModel, accountId: '', aspectRatio: DEFAULT_IMAGE_ASPECT_RATIO_ID });
     setWorkerConfig({ url: '' });
   };
 
@@ -195,6 +199,7 @@ export default function SettingsPage() {
                   <input type="radio" name="image-provider" checked={isActive} onChange={() => {
                     const base: Partial<ImageProviderConfig> = { id, label: preset.label, model: preset.defaultModel };
                     if (id === 'cloudflare') base.endpoint = workerConfig.url;
+                    if (!imageConfig.aspectRatio) base.aspectRatio = DEFAULT_IMAGE_ASPECT_RATIO_ID;
                     updateImage(base);
                   }} className="accent-blue-500" />
                   <span className="font-semibold">{preset.label}</span>
@@ -247,6 +252,26 @@ export default function SettingsPage() {
                         <input type="text" placeholder="https://your-image-endpoint"
                           value={isActive ? imageConfig.endpoint || '' : ''} onChange={(e) => isActive && updateImage({ endpoint: e.target.value })}
                           className="w-full p-2 bg-zinc-800 border border-zinc-700 rounded text-white outline-none text-sm" />
+                      </div>
+                    )}
+
+                    {isActive && (
+                      <div>
+                        <label className="text-xs text-zinc-500">Aspect ratio</label>
+                        <div className="flex gap-2 mt-1">
+                          {IMAGE_ASPECT_RATIOS.map((r) => {
+                            const sel = (imageConfig.aspectRatio ?? DEFAULT_IMAGE_ASPECT_RATIO_ID) === r.id;
+                            return (
+                              <button key={r.id} type="button" onClick={() => updateImage({ aspectRatio: r.id as ImageAspectRatioId })}
+                                className={`px-3 py-1.5 text-sm rounded border transition-colors ${sel ? 'bg-blue-600 border-blue-500 text-white' : 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:border-zinc-500'}`}>
+                                {r.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <p className="text-xs text-zinc-500 mt-1">
+                          3:4 (portrait, 900×1200) is the default — best for character-focused frames. 16:9 (1600×900) for scenic establishing shots.
+                        </p>
                       </div>
                     )}
                   </>

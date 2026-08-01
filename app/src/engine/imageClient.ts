@@ -1,4 +1,5 @@
-import { ImageProviderConfig } from './types';
+import { ImageProviderConfig, getAspectRatio } from './types';
+import type { ImageAspectRatioId } from './types';
 
 export interface ImageCallOptions {
   signal?: AbortSignal;
@@ -34,9 +35,11 @@ export class ImageClient {
   ): Promise<string | null> {
     const model = config.model || 'imagen-4.0-fast-generate-001';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:predict?key=${encodeURIComponent(config.apiKey)}`;
+    // Gemini Imagen accepts the literal ratio string ('3:4' / '16:9'); fall back to '3:4' if unset.
+    const ratio: ImageAspectRatioId = config.aspectRatio === '16:9' ? '16:9' : '3:4';
     const body = {
       instances: [{ prompt }],
-      parameters: { sampleCount: 1, aspectRatio: '16:9' },
+      parameters: { sampleCount: 1, aspectRatio: ratio },
     };
     try {
       const res = await fetch(url, {
@@ -66,11 +69,14 @@ export class ImageClient {
     const url = `${base}/cfimage`;
     const model = config.model || '@cf/black-forest-labs/flux-1-schnell';
     const fullPrompt = config.style ? `${config.style}, ${prompt}` : prompt;
+    const ratio = getAspectRatio(config.aspectRatio);
     const body: Record<string, unknown> = {
       model,
       prompt: fullPrompt,
       steps: 4,
       seed: Math.floor(Math.random() * 1_000_000),
+      width: ratio.width,
+      height: ratio.height,
     };
     try {
       const res = await fetch(url, {
@@ -120,6 +126,7 @@ export class ImageClient {
   ): Promise<string | null> {
     const url = config.endpoint || '';
     if (!url) return null;
+    const ratio = getAspectRatio(config.aspectRatio);
     try {
       const res = await fetch(url, {
         method: 'POST',
@@ -127,7 +134,7 @@ export class ImageClient {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${config.apiKey}`,
         },
-        body: JSON.stringify({ model: config.model, prompt }),
+        body: JSON.stringify({ model: config.model, prompt, width: ratio.width, height: ratio.height }),
         signal: opts.signal,
       });
       if (!res.ok) return null;
