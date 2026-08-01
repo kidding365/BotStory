@@ -101,7 +101,7 @@ describe('PromptComposer', () => {
     });
 
     it('routes a non-character visual scene through the NonCharacter Pre+subject+setting+appearance+NonCharacter Post template', () => {
-      const w = applyPreset({ ...mockWorld }, 'photorealistic-1');
+      const w = applyPreset({ ...mockWorld }, 'photorealistic');
       const prompt = composer.buildImagePrompt(
         w,
         mockInstance,

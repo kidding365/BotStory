@@ -23,32 +23,21 @@ function blankWorld(
 }
 
 describe('imageStylePresets', () => {
-  it('exposes the IW catalog with the user-requested presets present', () => {
+  it('exposes the trimmed IW catalog: exactly four presets (none + photorealistic + pseudorealistic-cgi + anime)', () => {
     const ids = IMAGE_STYLE_PRESETS.map((p) => p.id);
-    expect(ids).toContain('photorealistic-1');
-    expect(ids).toContain('photorealistic-2');
-    expect(ids).toContain('pseudorealistic-cgi');
-    expect(ids).toContain('anime');
-    expect(ids).toContain('anime-2');
-    expect(ids).toContain('pulp-fantasy');
-    expect(ids).toContain('dark-fantasy');
-    expect(ids).toContain('comic-book');
-    expect(ids).toContain('noir-drawing');
-    expect(ids).toContain('digital-illustration');
-    expect(ids).toContain('concept-art');
-    expect(ids).toContain('none');
+    expect(ids).toEqual(['none', 'photorealistic', 'pseudorealistic-cgi', 'anime']);
   });
 
-  it('regresses the verbatim Photorealistic-1 strings captured from the real College-of-Magic IW export', () => {
-    const p1 = getPreset('photorealistic-1');
-    expect(p1.imageStyleCharacterPre).toBe('Highly attractive, sexy medium close-up photograph of');
-    expect(p1.imageStyleCharacterPost).toContain('IWBeautiful');
-    expect(p1.imageStyleNonCharacterPre).toBe('Photograph of');
-    expect(p1.imageStyleNonCharacterPost).toBe('High quality photograph. Setting: Medieval high fantasy.');
+  it('regresses the verbatim Photorealistic strings captured from the real College-of-Magic IW export', () => {
+    const p = getPreset('photorealistic');
+    expect(p.imageStyleCharacterPre).toBe('Highly attractive, sexy medium close-up photograph of');
+    expect(p.imageStyleCharacterPost).toContain('IWBeautiful');
+    expect(p.imageStyleNonCharacterPre).toBe('Photograph of');
+    expect(p.imageStyleNonCharacterPost).toBe('High quality photograph. Setting: Medieval high fantasy.');
   });
 
-  it('defaults to photorealistic-1 for new worlds (the IW default)', () => {
-    expect(DEFAULT_IMAGE_STYLE_PRESET_ID).toBe('photorealistic-1');
+  it('defaults to photorealistic for new worlds (the IW default)', () => {
+    expect(DEFAULT_IMAGE_STYLE_PRESET_ID).toBe('photorealistic');
   });
 
   it('getPreset returns the none preset for unknown ids', () => {
@@ -57,7 +46,12 @@ describe('imageStylePresets', () => {
     expect(p.imageStyleCharacterPre).toBe('');
   });
 
-  it('matchPreset identifies the IW-exported College of Magic strings as photorealistic-1', () => {
+  it('getPreset gracefully falls back for the legacy photorealistic-1 id (post-trim)', () => {
+    const p = getPreset('photorealistic-1');
+    expect(p.id).toBe('none');
+  });
+
+  it('matchPreset identifies the IW-exported College of Magic strings as photorealistic (renamed from photorealistic-1)', () => {
     const realIWWorld = blankWorld({
       imageStyle: 'photorealistic-1',
       imageStyleCharacterPre: 'Highly attractive, sexy medium close-up photograph of',
@@ -66,7 +60,7 @@ describe('imageStylePresets', () => {
       imageStyleNonCharacterPre: 'Photograph of',
       imageStyleNonCharacterPost: 'High quality photograph. Setting: Medieval high fantasy.',
     });
-    expect(matchPreset(realIWWorld).id).toBe('photorealistic-1');
+    expect(matchPreset(realIWWorld).id).toBe('photorealistic');
   });
 
   it('matchPreset returns none for a blank world', () => {
@@ -85,11 +79,11 @@ describe('imageStylePresets', () => {
 
   it('isCustomised returns false for a preset-matched world', () => {
     const w = blankWorld({
-      imageStyleCharacterPre: 'Highly attractive, sexy medium close-up photograph of',
+      imageStyleCharacterPre: 'Anime illustration of',
       imageStyleCharacterPost:
-        'Authentic period medieval clothing. IWBeautiful IWBeautiful2 Smooth, flawless skin and a perfect face. Looking at the viewer. IWUpscaleFaceSmooth Setting: Medieval magical high fantasy.',
-      imageStyleNonCharacterPre: 'Photograph of',
-      imageStyleNonCharacterPost: 'High quality photograph. Setting: Medieval high fantasy.',
+        'Anime cel shading, vibrant detailed hair, large expressive eyes. IWAnime Anime key visual quality. Looking at the viewer.',
+      imageStyleNonCharacterPre: 'Anime illustration of',
+      imageStyleNonCharacterPost: 'Anime cel shading, vibrant colour palette. IWAnime Anime background art quality.',
     });
     expect(isCustomised(w)).toBe(false);
   });
@@ -109,7 +103,7 @@ describe('imageStylePresets', () => {
   });
 
   it('applyPreset("none") clears all four fields and sets imageStyle back to null', () => {
-    const base = applyPreset(blankWorld() as World, 'photorealistic-1');
+    const base = applyPreset(blankWorld() as World, 'photorealistic');
     const cleared = applyPreset(base, 'none');
     expect(cleared.imageStyle).toBeNull();
     expect(cleared.imageStyleCharacterPre).toBeUndefined();
@@ -126,7 +120,7 @@ describe('imageStylePresets', () => {
       name: 'original name',
       instructions: 'do not touch',
     } as World;
-    const out = applyPreset(w, 'comic-book');
+    const out = applyPreset(w, 'pseudorealistic-cgi');
     expect(out.id).toBe('preserve-me');
     expect(out.title).toBe('original title');
     expect(out.name).toBe('original name');

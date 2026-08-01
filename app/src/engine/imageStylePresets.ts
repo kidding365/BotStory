@@ -7,13 +7,23 @@ import { World } from './types';
  * setting/expression) in `imageStyle{Character,NonCharacter}{Pre,Post}` prompt-template
  * strings that the composer.ts `buildImagePrompt` already understands. Selecting a preset
  * is a one-click way to populate those four fields with flavour-giving tokens
- * ("Photorealistic", "Pseudorealistic CGI", "Anime", "Pulp fantasy", …) instead of
- * hand-authoring them per world.
+ * ("Photorealistic", "Pseudorealistic CGI", "Anime") instead of hand-authoring them per world.
+ *
+ * Trimmed 2026-07-30 on user direction: the original 12-preset catalog was over-precise —
+ * the "Photorealistic" variants (Hollywood movie / Dramatic / Candid / etc.) were not that
+ * different in practice; image quality mostly depends on how well the LLM-explained prompt
+ * is structured, not on which cinematic tokens are appended. The hidden gem is
+ * "Pseudorealistic CGI" — with the right narrative prompt it can produce both photoreal
+ * and anime-styled frames. Keep the catalog lean to avoid choice-paralysis.
  *
  * The original strings are sourced from live IW recon (2026-07-28) plus the real
  * IW-exported College of Magic schema (docs/college_of_magic_schema.json) — the
- * "photorealistic-1" preset below is verbatim what IW actually ships. Other presets
- * use the standard IW tag-token conventions (`IW<Tokens>`).
+ * "photorealistic" preset below is verbatim what IW ships under "Photorealistic 1 (Default)"
+ * for Manticore. The other presets use the standard IW tag-token conventions
+ * (`IW<Tokens>`). The preset id was renamed from `photorealistic-1` → `photorealistic`
+ * when the catalog was trimmed; importer round-trips still recognise a world carrying
+ * `imageStyle: "photorealistic-1"` via the `matchPreset` exact-string match on the four
+ * textarea values (so the College of Magic schema continues to autoflow to "Photorealistic").
  *
  * See docs/iw_image_style_presets.json for the full source catalog and provenance.
  */
@@ -45,8 +55,8 @@ export const IMAGE_STYLE_PRESETS: readonly ImageStylePreset[] = [
     imageStyleNonCharacterPost: '',
   },
   {
-    id: 'photorealistic-1',
-    label: 'Photorealistic 1 (Default)',
+    id: 'photorealistic',
+    label: 'Photorealistic',
     description:
       'IW Manticore / Flux default. Real strings captured from the College of Magic IW schema. Gives the camera-photo close-up look IW users see out of the box.',
     imageStyleCharacterPre: 'Highly attractive, sexy medium close-up photograph of',
@@ -56,21 +66,10 @@ export const IMAGE_STYLE_PRESETS: readonly ImageStylePreset[] = [
     imageStyleNonCharacterPost: 'High quality photograph. Setting: Medieval high fantasy.',
   },
   {
-    id: 'photorealistic-2',
-    label: 'Photorealistic 2 (Hollywood movie)',
-    description: 'Cinematic-flavour variant. Colour-graded key-lit movie still feel.',
-    imageStyleCharacterPre: 'Cinematic Hollywood movie still, dramatic key-lit medium close-up of',
-    imageStyleCharacterPost:
-      'Anamorphic lens flare, teal-and-orange colour grading, shallow depth of field. IWBeautiful IWBeautiful2 IWPhotorealistic Realistic skin texture and pores. Looking at the viewer.',
-    imageStyleNonCharacterPre: 'Cinematic Hollywood movie still, dramatic key-lit shot of',
-    imageStyleNonCharacterPost:
-      'Anamorphic lens flare, teal-and-orange colour grading, shallow depth of field. IWPhotorealistic Photorealistic high-detail cinematic.',
-  },
-  {
     id: 'pseudorealistic-cgi',
     label: 'Pseudorealistic CGI',
     description:
-      "Photo-adjacent CGI render. Halfway between still photography and a high-end 3D render (Unreal/Octane) — IW's Manticore preset of the same name.",
+      'Hidden gem — halfway between photography and a high-end 3D render (Unreal/Octane). With well-explained prompts it can produce both photoreal and anime-styled frames, so it is the most flexible single-preset choice for users who do not want to flip presets per scene.',
     imageStyleCharacterPre: 'Pseudorealistic CGI render of',
     imageStyleCharacterPost:
       'High-end 3D render, Octane-quality subsurface skin, perfectly-lit shot-reverse-shot framing. IWPhotorealistic IWCGI Looking at the viewer. Impeccable detail.',
@@ -88,92 +87,13 @@ export const IMAGE_STYLE_PRESETS: readonly ImageStylePreset[] = [
     imageStyleNonCharacterPre: 'Anime illustration of',
     imageStyleNonCharacterPost: 'Anime cel shading, vibrant colour palette. IWAnime Anime background art quality.',
   },
-  {
-    id: 'anime-2',
-    label: 'Anime 2',
-    description:
-      'Second Manticore Anime preset — softer shoujo/Studio-Ghibli-ish linework with watercolour wash backgrounds.',
-    imageStyleCharacterPre: 'Soft anime watercolour illustration of',
-    imageStyleCharacterPost:
-      'Studio-Ghibli-inspired soft watercolour shading, gentle painted background, warm tones. IWAnime2 Anime key visual quality. Looking at the viewer.',
-    imageStyleNonCharacterPre: 'Soft anime watercolour illustration of',
-    imageStyleNonCharacterPost:
-      'Studio-Ghibli-inspired soft watercolour shading. IWAnime2 Anime background-art quality.',
-  },
-  {
-    id: 'pulp-fantasy',
-    label: 'Pulp fantasy',
-    description:
-      'Old-school pulp novel cover / Frank Frazetta flavour — muscular figures, dramatic chiaroscuro, painted feel.',
-    imageStyleCharacterPre: 'Pulp fantasy novel cover painting of',
-    imageStyleCharacterPost:
-      'Frank Frazetta-inspired muscular painted figure, dramatic chiaroscuro, oil-on-canvas pulp cover look. IWPulpFantasy IWFantasy Looking at the viewer.',
-    imageStyleNonCharacterPre: 'Pulp fantasy novel cover painting of',
-    imageStyleNonCharacterPost:
-      'Frank Frazetta-inspired dramatic chiaroscuro, oil-on-canvas pulp fantasy. IWPulpFantasy IWFantasy.',
-  },
-  {
-    id: 'dark-fantasy',
-    label: 'Dark fantasy',
-    description: 'Desaturated, brooding — Bloodborne / dark-souls concept art feel.',
-    imageStyleCharacterPre: 'Dark fantasy illustration of',
-    imageStyleCharacterPost:
-      'Desaturated gothic colour palette, moody rim lighting, blood-stone aesthetic. IWDarkFantasy IWFantasy Looking at the viewer.',
-    imageStyleNonCharacterPre: 'Dark fantasy illustration of',
-    imageStyleNonCharacterPost:
-      'Desaturated gothic colour palette, moody rim lighting, blood-stone aesthetic. IWDarkFantasy IWFantasy.',
-  },
-  {
-    id: 'comic-book',
-    label: 'Comic book',
-    description: 'Western comic-book inked look — bold black ink outline, halftone shading, flat colour blocks.',
-    imageStyleCharacterPre: 'Comic book panel illustration of',
-    imageStyleCharacterPost:
-      'Bold black inked outline, halftone dot shading, flat vibrant colour blocks. IWComicBook Looking at the viewer.',
-    imageStyleNonCharacterPre: 'Comic book panel illustration of',
-    imageStyleNonCharacterPost:
-      'Bold black inked outline, halftone dot shading, flat vibrant colour blocks. IWComicBook.',
-  },
-  {
-    id: 'noir-drawing',
-    label: 'Noir drawing',
-    description: 'Black-and-white noir pencil-and-ink feel, high-contrast shadows.',
-    imageStyleCharacterPre: 'Noir ink drawing of',
-    imageStyleCharacterPost:
-      'Black-and-white ink and wash, stark light-on-dark shading, gritty noir atmosphere. IWNoir Looking at the viewer.',
-    imageStyleNonCharacterPre: 'Noir ink drawing of',
-    imageStyleNonCharacterPost:
-      'Black-and-white ink and wash, stark light-on-dark shading, gritty noir atmosphere. IWNoir.',
-  },
-  {
-    id: 'digital-illustration',
-    label: 'Digital illustration',
-    description: 'Modern digital editorial illustration — semi-realistic shapes, painterly brushwork.',
-    imageStyleCharacterPre: 'Digital illustration of',
-    imageStyleCharacterPost:
-      'Painterly digital brushwork, semi-realistic shapes, editorial-illustration lighting. IWIllustration Looking at the viewer.',
-    imageStyleNonCharacterPre: 'Digital illustration of',
-    imageStyleNonCharacterPost:
-      'Painterly digital brushwork, semi-realistic shapes, editorial-illustration lighting. IWIllustration.',
-  },
-  {
-    id: 'concept-art',
-    label: 'Concept art',
-    description: 'Industry-standard concept-art pass — loose sketch energy, design-forward silhouettes.',
-    imageStyleCharacterPre: 'Concept art of',
-    imageStyleCharacterPost:
-      'Loose painterly concept-art pass, design-forward silhouette, varied thumbnail energy. IWConceptArt Looking at the viewer.',
-    imageStyleNonCharacterPre: 'Concept art of',
-    imageStyleNonCharacterPost:
-      'Loose painterly concept-art pass, design-forward silhouette, environmental concept art. IWConceptArt.',
-  },
 ] as const;
 
 const PRESET_BY_ID: Record<string, ImageStylePreset> = Object.fromEntries(
   IMAGE_STYLE_PRESETS.map((p) => [p.id, p])
 );
 
-export const DEFAULT_IMAGE_STYLE_PRESET_ID = 'photorealistic-1';
+export const DEFAULT_IMAGE_STYLE_PRESET_ID = 'photorealistic';
 
 /** Find a preset by id, returning the 'none' preset as a safe fallback. */
 export function getPreset(id: string | null | undefined): ImageStylePreset {
@@ -186,7 +106,8 @@ export function getPreset(id: string | null | undefined): ImageStylePreset {
  * by checking whether the world's four imageStyle* fields exactly match a
  * preset's. Used by the World editor's preset dropdown to mark the active selection
  * for imported worlds (such as the real College of Magic schema, which carries
- * the verbatim 'photorealistic-1' strings).
+ * the verbatim 'photorealistic' strings — matchPreset also recognises worlds that
+ * were saved with the legacy id `photorealistic-1` via the same exact-string match).
  */
 export function matchPreset(world: Pick<
   World,
