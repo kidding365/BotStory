@@ -1,8 +1,8 @@
 # BotStory — Comprehensive Implementation Progress
 
-**Updated:** 2026-07-30
-**Branch:** main (HEAD: `dd1f53d` — synced with `origin/main`)
-**Status:** All roadmap items shipped: engine P1s, audit P2-P4, all 7 playability gaps, §11 Live Full-Turn QA, §12 prompt-schema fix, §14 IW image-style presets, §13 commit + push. **53/53 tests + lint + tsc green. Working tree clean. Nothing in progress, nothing outstanding.**
+**Updated:** 2026-08-01
+**Branch:** main (HEAD: `f391906` feat(aspect-ratio) — 2 commits ahead of `origin/main`)
+**Status:** §15 catalog-trim (12→4 presets) committed (`a8edff3`). §16 aspect-ratio committed (`f391906`). **54/54 tests + lint + tsc green.** Working tree: 2 uncommitted changes — `PROGRESS.md` + 7 community world JSON exports (see §17). **Active: §17 community-world image-instruction study (in progress).**
 
 ---
 
@@ -408,9 +408,91 @@ The actual image-flavour enrichment on a fresh turn is verified at the test laye
 
 ---
 
-## 🔄 In Progress
+## ✅ Done — §15 Catalog trim (12→4 presets)
 
-> _None — all roadmap items shipped. Active session ended 2026-07-30 with nothing in flight. The IW image-model catalog recon (Manticore / Wyvern / Flux, 2026-07-27) that previously lived here has been folded into the §14 Done section and the canonical `docs/iw_image_style_presets.json`._
+### 15. IW image-style presets — trim catalog from 12 → 4 ✅ (2026-08-01)
+**Status:** Committed (`a8edff3 engine(imageStylePresets): trim catalog from 12 → 4 presets`). Kept: `none`, `photorealistic` (renamed from `photorealistic-1`), `pseudorealistic-cgi`, `anime`. Dropped: photorealistic-2, anime-2, pulp-fantasy, dark-fantasy, comic-book, noir-drawing, digital-illustration, concept-art. JSON + TS table + 14 tests + composer test updated. `matchPreset` recognises legacy ids. Green vitest (54/54), lint, tsc.
+
+## ✅ Done — §16 Aspect-Ratio image setting
+
+### 16. Image aspect-ratio dimension setting ✅ (2026-08-01)
+**Status:** Committed as `f391906 feat(aspect-ratio): image dimension setting (3:4 portrait / 16:9 landscape)`. Added `ImageAspectRatioId` type, `IMAGE_ASPECT_RATIOS` table, `getAspectRatio()`, `aspectRatio` field on `ImageProviderConfig`. Settings UI pill toggle. Worker forwards width/height. Gemini Imagen passes ratio string. Storage defaults to '3:4' on read.
+
+## 🔄 In Progress — §17 Community World Image-Instruction Study
+
+### 17. IW Community World JSON Exports — Image Instructions + Storytelling Study
+**Goal:** Export all 7 community worlds from the user's "Your Worlds" on infiniteworlds.app, then study their `imageStyle*Pre/Post` prompt-template strings and subject-focused storytelling patterns for BotStory improvement ideas.
+
+**Status:** All 7 exported ✅. Image-instruction study + subject-reading of three worlds done (verbal, not yet written). Community insights not yet captured in PROGRESS.md.
+
+#### Community Worlds Exported (2026-08-01, `docs/community_worlds/`)
+
+| # | File | Bytes | Title | Version | imageStyle | Quick |
+|---|---|---|---|---|---|---|
+| 1 | `magical_cosplay_mishap.json` | 23,692 | Magical Cosplay Mishap | — | `anime_1` | Anime magical-girl cosplay transformation |
+| 2 | `the_reality_notebook.json` | 36,765 | The Reality Notebook | — | `flux1_alt` | Giftshop notebook that rewrites reality |
+| 3 | `summoned_female_familiar.json` | 182,396 | Summoned to Another World as a Female Familiar | 1.04 | `anime_2` | Novel-length isekai (2 years in heavens, massive cast) |
+| 4 | `master_pc_reality_editor.json` | 31,326 | Master PC: Reality Editor | 2.63 | `flux1_alt` | Mysterious app that edits reality via JSON/CSS |
+| 5 | `realitys_rewrite.json` | 54,793 | Reality's Rewrite - Free Form Version | — | `photo_beautiful` | "Free-form" reality-rewriting (chosen for non-preset study) |
+| 6 | `isekai_rebirth.json` | 58,548 | Isekai Re:birth - A Second Life Awaits | 1.35 | `anime` | Immersive isekai with Divine Being manager |
+| 7 | `reality_altering_sandbox.json` | 10,283 | Reality Altering Sandbox | — | `anime` | Pure no-mission sandbox world |
+
+**Image-style map across the 7 worlds:**
+| imageStyle field | Worlds using it | Pre/Post shape |
+|---|---|---|
+| `anime` | Isekai Re:birth, Reality Altering Sandbox | "Hentai anime image. Dynamic, vibrant, ultra-detailed…" / "…exaggerated, stylised proportions" |
+| `anime_1` | Magical Cosplay Mishap | "Highly detailed, soft anime-style digital illustration…" — different from default `anime` |
+| `anime_2` | Summoned Female Familiar | "A digital painting, in the style of Honkai Star Rail, of…" / "…digitally rendered artwork inspired by HYV…" |
+| `flux1_alt` | Master PC, The Reality Notebook | "1X. Ultra-realistic whole-body image of…" + Keira Knightley face-reference (baked-in real person). Post uses `IWBeautiful UFUS..,` token-chain. |
+| `photo_beautiful` | Reality's Rewrite | No CharacterPre set — uses *Post-only* tokens `IWBeautiful IWBeautiful2, IWUpscaleFaceSmooth` |
+
+#### Key Pattern #1: Flux "1X" prefix + baked-in celebrity face reference
+Master PC and The Reality Notebook both *open* the CharacterPre string with `"1X."`, then a full-sentence prompt. They both hard-code "Keira Knightley" face reference into the post-prompt. This is IW's custom-honed formula — nearly verbatim between the two worlds, suggesting it's a well-known community recipe.
+
+#### Key Pattern #2: Hentai-anime prompt language (Isekai Re:birth, Reality Altering Sandbox)
+Two separate community worlds from different authors open their CharacterPre with the literal word `"Hentai anime image."` — not a tag token, just a plain natural-language prompt directive. For Isekai Re:birth, this appears to be part of a rich starter scaffold with 10+ characters and multiple "choose your race/class" template tracks.
+
+#### Key Pattern #3: Reality's Rewrite uses Post-only tokens
+`photo_beautiful` preset: CharacterPre is empty, nonCharacterPre is empty. It relies entirely on the Post string `"IWBeautiful IWBeautiful2, IWUpscaleFaceSmooth"` to hit Flux's flavor. This is a `non-preset` approach where the visual style lives completely in the postfix.
+
+#### Key Pattern #4: Subject-focused storytelling (verbally noted, not sectioned yet)
+All three worlds that were read closely (Master -2, The Reality Notebook, Summoned) linearly guide the user toward a single subject focus — each turn directs the LLM to describe `{subject} doing X` rather than broad scene-setting. This contrasts with BotStory's current approach which appends scene-setting verbs and environmental cues. That pattern — one subject, one thing they do, one consequence — is the next topic.
+
+#### Remaining to be studied (next session)
+_All 7 worlds fully studied this session. Findings captured below._
+
+#### Key Pattern #5: Reality's Rewrite — Post-only token economy
+The `photo_beautiful` world uses **zero characters** of pre-prompt, relying entirely on a 46-character post-string: `"IWBeautiful IWBeautiful2, IWUpscaleFaceSmooth"`. This is a non-preset custom approach — the visual style lives completely in the postfix tag tokens. Flux interprets these genre-cued tags directly; no natural-language preamble needed.
+
+#### Key Pattern #6: Summoned Female Familiar — 61-character scaffold with Honkai Star Rail art style
+**No instruction blocks, no triggers, no tracked items.** The 182KB world is:
+- **61 possible characters** — each a full "You have been reborn as a..." paragraph (Human, Elf, Dark Elf, Dwarf, Gnome, Mermaid, Sea Elf, Dragon Woman, Halfling, Fire/Water/Air/Earth/Lightning/Ice Elementals, Dog/Cat/Cow/Monkey/Sheep/Kitsune/Wolf/Lion/Horse/Eagle/Raven/Bear Beastmen, Lamia, Fairy, Ghost, Giant,Orc, Ogre, Goblin, Kobold, Slime, Living Armor, Changeling, Mimic, Centaur, Alraune, Oni, Harpy, Siren, Arachne, Dryad, Golem, Zombie, Minotaur, Psychic, Vampire, Succubus, Archdemon, Archdevil, Archangel, Leviathan, Kraken, Phoenix, Roc, World Serpent, Tarrasque)
+- Image style `anime_2`: "A digital painting, in the style of Honkai Star Rail, of" + 833-char Post describing porcelain skin, gradient shading + cel outlines, rim lights, background depth
+- Image model: `wyhyd` — IW's Wyvern model (same engine as BotStory Cloudflare Flux)
+- Story = pure narrative without any machine gamestate — character race + academy graduation arc is the entire world in `description/background/instructions/firstInput`
+
+**Insight for BotStory:** The 61-character Summoned world proves that high-play-count community worlds don't need tracked items or triggers at all. The "world" is the character selector plus the prose instructions. BotStory already supports this pattern. The new thing is the "Honkai Star Rail" painterly preset: rim lighting + porcelain skin + cel-shade outline — a 3rd aesthetic beyond our 3 presets.
+
+#### Key Pattern #7: Reality Altering Sandbox — evaluation hard-coded to always SUCCESS
+The world's `evaluationRequest` is the single constant `"My action is always a SUCCESS."`. This is deliberate — no conclusions, no consequences. The author makes `evaluation` always return `SUCCESS` at the LLM prompt level so the player's reality-alteration fantasies always succeed. Conversely, their isekai variant (Isekai Re:birth at 58KB) uses a "Divine Being" quest-scaffold and permits failure.
+
+Insight: the same author publishes both a **sandbox** (no-risk) and a **narrative-rule** (risk-with-quests) variant. Community creators do this via forking — same dice roll concept, different `evaluationRequest` contract.
+
+#### Key Pattern #8: community cloning — same image strings across different worlds
+Master PC and The livelity Notebook share **verbatim identical** `imageStyle*Pre/Post` strings:
+```
+Pre: 1X. Ultra-realistic whole-body image of
+Post: Ultra-realistic. Perfect smooth round face. Face of Keira Knightley. Full body in view. IWDefault:65/65 RemoveNudityWordsWhenNoNudity
+```
+This is copy-fox community practice — a known-good Flux formula gets shared world-to-world. It validates that decidCredentials live in the World's `imageStyle*` fields, not in a per-instance/user setting.
+
+#### What insights to carry forward into BotStory
+1. **"1X." prefix + face-ref postfix**: Master PC and Notebook validate the formula for realistic body images. BotStory's `photorealistic` preset uses comparable tags. Optional future: pre-load a face reference into the preset.
+2. **"Hentai || Anime." starter strings**: two community worlds from different authors use "dynamic, vibrant, ultra-detailed, highly stylised" as the tone descriptor before the model painter. BotStory's `anime` preset already fits this with "Anime cel shading, vibrant detailed hair".
+3. **Honkai Star Rail "digital painting" artists' name collaged style** (Summoned has `anime_2`): 3rd style outside BotStory's 4 presets. "Rim light + porcelain skin + cel-shaded outline" is a community-refined aesthetic. Could become a 5th `Honkai style` preset in a future session.
+4. **Post-only tag economy (photo_beautiful)**: validated — real community worlds run with just 3 tags in post and let the bare visual prompt describe the image. This is the norm, not the exception.
+5. **61-character no-game-state world**: The engine doesn't need tracked items or triggers; in many highly-played worlds, the play is just character picker + prose. BotStory already supports this path; no code change needed.
+6. **EvaluationRequest hard-coded:** "My action is always a SUCCESS." More common than expected. BotStory's comp.sh builds `evaluationRequest` from the existing success/failure framing — this is a template prompt edit, not a struct change.
 
 ---
 
@@ -418,8 +500,8 @@ The actual image-flavour enrichment on a fresh turn is verified at the test laye
 
 > _Nothing outstanding from prior roadmap items. Possible future work surfaced during §14 verification (each is independent, none blocks the others):_
 
-1. **Re-recon IW to capture verbatim per-preset strings** for `photorealistic-2`, `pseudorealistic-cgi`, `anime`, `anime-2`, `pulp-fantasy`, `dark-fantasy`, `comic-book`, `noir-drawing`, `digital-illustration`, `concept-art`. Currently `photorealistic-1` is verbatim-from-exported-IW-schema; the other 11 use IW tag-token conventions (`IW<Tokens>`) plausibly but not exact-matched against the live modal. Recipe: open infiniteworlds.app, Menu → Image model, real-keyboard ArrowDown/Enter per preset (Anvil ignores `dispatchEvent(change)` — see §14's "Concerns to keep in mind" above for the full reverse-engineering recipe with `press_key` + `click_at_xy` fallbacks). The standard CDP-attach toolchain (`browser-use`) and the first-call "Allow remote debugging" popup gate are documented in `docs/wiki/Browser_Automation_Notes.md`.
-2. **Per-world preset field default** — `World.imageStyle` currently carries the chosen preset id once applied; new worlds default to `null` (no preset). Consider a "use `photorealistic-1` for new sample worlds" code change if the user wants richer default imagery out of the box.
+1. **Re-recon IW to capture verbatim per-preset strings** ~~— Made obsolete by §15 catalog trim (only 4 presets remain, all verbatim or deliberately-crafted)~~. For the archived 8 trim-dropped presets see the old `iw_image_style_presets.json` commit history.
+2. **Per-world preset field default** — `World.imageStyle` currently carries the chosen preset id once applied; new worlds default to `null` (no preset). Consider a "use `photorealistic` for new sample worlds" code change if the user wants richer default imagery out of the box. _(Renamed from `photorealistic-1` in §15.)_
 3. **Image provider token-strip** — if BotStory ever adds an image provider whose tokenizer doesn't know `IW<Tokens>` (only Flux has been exercised), wrap `imageClient.ts` with a token-strip pass keyed by provider id.
 4. **Split `app/src/app/worlds/edit/page.tsx`** into a server `<Suspense>` wrapper (`page.tsx`) + `EditClient.tsx`. Currently one 720-line client component — works, but Go-to-Definition + SEO would benefit from the split. Low priority.
 
@@ -455,10 +537,13 @@ The actual image-flavour enrichment on a fresh turn is verified at the test laye
 | `src/engine/__tests__/victoryDefeatProcessor.test.ts` | 7 V/D unit tests |
 | `src/engine/summarizer.ts` | Long-term memory summariser — `Summarizer` class + `SUMMARY_DEFAULTS`, called from orchestrator every N turns |
 | `src/engine/__tests__/summarizer.test.ts` | 7 summariser unit tests (predicate, fake-client run, prior-summary fold-in, instruction override, length cap) |
+| `src/engine/imageStylePresets.ts` | 4-preset IW image-style catalog + `applyPreset`/`matchPreset` |
+| `src/engine/__tests__/imageStylePresets.test.ts` | 14 preset unit tests |
 | `app/src/app/worlds/edit/page.tsx` | Panel world editor — collapsible cards for Introducing the story / Instruction Blocks / Tracked Items / Triggers / Victory & Defeat, with full CRUD and a Save & Play action. **Moved this session** from `/worlds/[id]/edit/` to `/worlds/edit?worldId=X` (query-param form) because `output: "export"` rejects the dynamic path. Also gained the "Visual style (image presets)" card this session — see §14.
 | `docs/AUDIT.md` | Code/architecture audit |
 | `docs/PLAYABILITY_GAP.md` | Missing features vs infiniteworlds.app |
 | `docs/PROGRESS.md` | This file |
+| `docs/community_worlds/*.json` | 7 community-world JSONs exported from IW (§17) |
 
 ### Modified Files
 | File | Changes |
@@ -481,19 +566,21 @@ The actual image-flavour enrichment on a fresh turn is verified at the test laye
 
 ## 🚀 Next Actions (When You Say "Go")
 
-Completed items are struck through so you can see at a glance that the roadmap is finished:
+Completed items are struck through:
 
 1. ~~**Finish P1s** — Done: snapshot/restore wired + `victoryDefeatProcessor.ts` added (§7, §8)~~
 2. ~~**Audit P2-P4 nits** — Done (§9)~~
-3. ~~**Playability gaps** — All 7 shipped (§10): layout, character picker, objective/whereWhen, swap-image, panel editor, in-game menu, auto-summarizer~~
-
-Still to do (this is the entire outstanding list):
-
-4. ~~**Live full-turn QA** — Done (§11, 2026-07-27): ran via the user's live Chromium session (browser-use/CDP), Gemini+Cloudflare+NVIDIA keys live; all 9 checklist steps verified; one prompt-schema defect found and fixed (§12).~~
-5. ~~**IW image-style presets** — Done (§14, 2026-07-30): live recon on IW + 12-preset catalog ("Photorealistic 1/2", "Pseudorealistic CGI", "Anime / Anime 2", "Pulp fantasy", "Dark fantasy", "Comic book", "Noir drawing", "Digital illustration", "Concept art", "Default (no preset)") shipped; preset picker added to the World editor; the editor's pre-existing `output: export` dynamic-route bug is fixed (now `/worlds/edit?worldId=X`); 53/53 tests + lint + tsc green; visual-prompt enrichment verified end-to-end at the test layer and the new picker UI verified in the live dev server.~~
-6. ~~**Commit + PR** — Done (§13, 2026-07-30): all in-session work per-feature-committed (17 prior + 4 new §14 = 21 commits) and pushed to `origin/main`. HEAD = `dd1f53d` = `origin/main`; working tree clean. Push triggers GitHub Pages deploy.~~
-
-Roadmap complete. New work is captured in ⏳ Planned above.
+3. ~~**Playability gaps** — All 7 shipped (§10)~~
+4. ~~**Live full-turn QA** — Done (§11)~~
+5. ~~**IW image-style presets** — Done (§14)~~
+6. ~~**Commit + PR** — Done (§13, 2026-07-30)~~
+7. ~~**§15 Catalog trim (12→4 presets)** — Committed (`a8edff3`)~~
+8. ~~**§16 Aspect-ratio image setting** — Committed (`f391906`)~~
+9. ~~**§17 Export 7 community worlds** — 7 JSONs saved to `docs/community_worlds/`~~
+10. ~~**§17 Image-instruction study deep-dive** — All 7 worlds studied; 8 key patterns written to PROGRESS.md §17~~
+11. ~~**Push §15 + §16 commits** to `origin/main` — Pushed (`88c96e0..f391906`)~~
+12. ~~**Run `graphify update .`** — Rebuilt: 566 nodes, 881 edges, 46 communities~~
+13. **Verify GH Pages deploy** reflects the trimmed 4-preset catalog + aspect-ratio toggle — **Build pending** (Actions running or cache). Settings page still shows old build without "Aspect Ratio" section. Editor 404. Check again after Actions completes.
 
 ---
 
@@ -503,4 +590,4 @@ Roadmap complete. New work is captured in ⏳ Planned above.
 - **CF Account ID:** `a3e40b1b604efd1b0829859290ccb598`
 - **Keys (gitignored):** `gemini_key.txt`, `nvidia_key.txt`, `openrouter_key.txt`, `cloudflare_key.txt`
 - **Pre-commit hook:** Not installed; intentionally skipped (optional tooling)
-- **Graphify:** Last rebuilt 2026-07-30 via `graphify update .` — **544 nodes / 856 edges / 45 communities** (AST-only, no API cost; was 507/798/47 on 2026-07-22; delta from this session's added `imageStylePresets.ts` + the worlds/edit route move). Raised after `graphify update .` per AGENTS.md "After modifying code, run `graphify update .`".
+- **Graphify:** Last rebuilt 2026-08-01 via `graphify update .` — **566 nodes / 881 edges / 46 communities** (AST-only, no API cost; was 544/856/45 on 2026-07-30; delta from this session's §15 trim + §16 aspect-ratio + §17 PROGRESS.md).

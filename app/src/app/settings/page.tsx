@@ -64,31 +64,40 @@ const IMAGE_PRESETS: Record<ImageProviderId, { label: string; defaultModel: stri
 };
 
 export default function SettingsPage() {
-  const [textConfig, setTextConfig] = useState<TextProviderConfig>(() =>
-    storage.getTextProvider() ?? storage.migrateTextProvider() ?? {
+  const [textConfig, setTextConfig] = useState<TextProviderConfig>(() => {
+    if (typeof window === 'undefined') {
+      return { id: 'gemini' as TextProviderId, label: TEXT_PRESETS.gemini.label, apiKey: '', model: TEXT_PRESETS.gemini.defaultModel };
+    }
+    return storage.getTextProvider() ?? storage.migrateTextProvider() ?? {
       id: 'gemini' as TextProviderId,
       label: TEXT_PRESETS.gemini.label,
       apiKey: '',
       model: TEXT_PRESETS.gemini.defaultModel,
-    }
-  );
+    };
+  });
   const [textSaved, setTextSaved] = useState(false);
 
-  const [imageConfig, setImageConfig] = useState<ImageProviderConfig>(() =>
-    storage.getImageProvider() ?? storage.migrateImageProvider() ?? {
+  const [imageConfig, setImageConfig] = useState<ImageProviderConfig>(() => {
+    if (typeof window === 'undefined') {
+      return { id: 'cloudflare' as ImageProviderId, label: IMAGE_PRESETS.cloudflare.label, apiKey: '', model: IMAGE_PRESETS.cloudflare.defaultModel, accountId: '', aspectRatio: DEFAULT_IMAGE_ASPECT_RATIO_ID };
+    }
+    return storage.getImageProvider() ?? storage.migrateImageProvider() ?? {
       id: 'cloudflare' as ImageProviderId,
       label: IMAGE_PRESETS.cloudflare.label,
       apiKey: '',
       model: IMAGE_PRESETS.cloudflare.defaultModel,
       accountId: '',
       aspectRatio: DEFAULT_IMAGE_ASPECT_RATIO_ID,
-    }
-  );
+    };
+  });
   const [imageSaved, setImageSaved] = useState(false);
 
-  const [workerConfig, setWorkerConfig] = useState<WorkerConfig>(() =>
-    storage.getWorkerConfig() ?? { url: 'https://botstory-proxy.jainkumar365.workers.dev' }
-  );
+  const [workerConfig, setWorkerConfig] = useState<WorkerConfig>(() => {
+    if (typeof window === 'undefined') {
+      return { url: 'https://botstory-proxy.jainkumar365.workers.dev' };
+    }
+    return storage.getWorkerConfig() ?? { url: 'https://botstory-proxy.jainkumar365.workers.dev' };
+  });
   const [workerSaved, setWorkerSaved] = useState(false);
 
   const updateText = (patch: Partial<TextProviderConfig>) => {
